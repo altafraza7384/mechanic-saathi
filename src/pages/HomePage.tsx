@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   collection,
   onSnapshot,
@@ -18,6 +18,11 @@ export default function HomePage() {
   const navigate = useNavigate();
   const [requests, setRequests] = useState<SosRequest[]>([]);
   const [toggling, setToggling] = useState(false);
+  const [holdNotice, setHoldNotice] = useState(false);
+  const forcedOfflineRef = useRef(false);
+  // Old docs have no status field — treat missing status as "active".
+  const isHeld = profile?.status === "held";
+  const warningCount = profile?.warnings ?? 0;
 
   // Live listener: every pending SOS request, filtered client-side by
   // the mechanic's own categories + service radius.
@@ -36,6 +41,25 @@ export default function HomePage() {
     return unsub;
   }, []);
 
+  // Held mechanic: force offline once so no new requests reach them.
+  // The ref guard makes this fire only while held && online — after the
+  // write + refresh, isOnline is false and the effect becomes a no-op,
+  // so there is no loop. The ref resets if the hold is later lifted,
+  // so a re-hold forces offline again.
+  useEffect(() => {
+    if (profile?.status !== "held") {
+      forcedOfflineRef.current = false;
+      return;
+    }
+    if (!user || !profile.isOnline || forcedOfflineRef.current) return;
+    forcedOfflineRef.current = true;
+    updateDoc(doc(db, "mechanics", user.uid), { isOnline: false })
+      .then(() => refreshProfile())
+      .catch(() => {
+        forcedOfflineRef.current = false;
+      });
+  }, [user, profile, refreshProfile]);
+
   const visible = requests.filter((r) => {
     if (!profile) return false;
     if (!profile.categories.includes(r.category)) return false;
@@ -53,6 +77,11 @@ export default function HomePage() {
 
   const toggleOnline = async () => {
     if (!user || !profile) return;
+    // Held mechanics cannot toggle: show the held message instead.
+    if (isHeld) {
+      setHoldNotice(true);
+      return;
+    }
     setToggling(true);
     try {
       await updateDoc(doc(db, "mechanics", user.uid), {
@@ -86,44 +115,77 @@ export default function HomePage() {
           Logout
         </button>
       </div>
+      {isHeld && (
+        <div className="card hold-banner">
+          <strong>⛔ Account hold par hai</strong>
+          <span>
+            Admin ne tumhara account hold kar diya hai, isliye nayi
+            requests nahi milengi.
+          </span>
+          {profile.held_reason && (
+            <span>Reason: {profile.held_reason}</span>
+          )}
+          <span className="muted small">Warnings: {warningCount}</span>
+        </div>
+      )}
       <div
-        className={profile.isOnline ? "status on" : "status off"}
+        className={
+          isHeld ? "status off" : profile.isOnline ? "status on" : "status off"
+        }
         onClick={toggleOnline}
       >
         <span className="dot" />
-        {toggling
-          ? "Badal rahe hain..."
-          : profile.isOnline
-            ? "ONLINE — Requests mil rahi hain"
-            : "OFFLINE — Requests ke liye ONLINE karo"}
+        {isHeld
+          ? "ACCOUNT HOLD — Nayi requests band hain"
+          : toggling
+            ? "Badal rahe hain..."
+            : profile.isOnline
+              ? "ONLINE — Requests mil rahi hain"
+              : "OFFLINE — Requests ke liye ONLINE karo"}
       </div>
-      {!profile.isOnline && (
+      {holdNotice && (
+        <p className="error">
+          Account hold par hai — online tabhi ho sakoge jab admin hold
+          hatayega.
+        </p>
+      )}
+      {!isHeld && !profile.isOnline && (
         <p className="muted">
           Offline ho to koi request nahi milegi. Kaam ke liye ONLINE karo.
         </p>
       )}
-      <h2>
-        Nayi requests {profile.isOnline ? `(${visible.length})` : ""}
-      </h2>
-      {!profile.isOnline ? (
-        <p className="muted">Online hone par yahan requests dikhengi.</p>
-      ) : visible.length === 0 ? (
+      {isHeld ? (
         <p className="muted">
-          Abhi tumhari services/radius me koi pending request nahi hai.
+          Hold hatne ke baad hi nayi requests yahan dikhengi.
         </p>
       ) : (
-        <div className="list">
-          {visible.map((r) => (
-            <Link key={r.id} to={`/request/${r.id}`} className="card">
-              <strong>{categoryLabel(r.category)}</strong>
-              <span>{r.areaText ?? "Area nahi diya"}</span>
-              {r.description && <span className="muted">{r.description}</span>}
-              <span className="muted small">
-                {new Date(r.created_at).toLocaleString("en-IN")}
-              </span>
-            </Link>
-          ))}
-        </div>
+        <>
+          <h2>
+            Nayi requests {profile.isOnline ? `(${visible.length})` : ""}
+          </h2>
+          {!profile.isOnline ? (
+            <p className="muted">Online hone par yahan requests dikhengi.</p>
+          ) : visible.length === 0 ? (
+            <p className="muted">
+              Abhi tumhari services/radius me koi pending request nahi hai.
+            </p>
+          ) : (
+            <div className="list">
+              {visible.map((r) => (
+                <Link key={r.id} to={`/request/${r.id}`} className="card">
+                  <strong>{categoryLabel(r.category)}</strong>
+                  <span>{r.areaText ?? "Area nahi diya"}</span>
+                  {r.description && (
+                    <span className="muted">{r.description}</span>
+                  )}
+                  <span className="muted small">
+                    {new Date(r.created_at).toLocaleString("en-IN")}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </>
       )}
       <div className="row">
         <button className="ghost" onClick={() => navigate("/profile")}>
