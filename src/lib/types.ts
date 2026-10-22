@@ -23,6 +23,13 @@ export interface MechanicProfile {
   isVerified: boolean;
   rating: number | null;
   totalJobs: number;
+  // Admin-managed fields (set from the Driver Saathi admin panel).
+  // Optional so old mechanic docs without them keep working: missing
+  // status means "active", missing warnings means 0.
+  status?: "active" | "held";
+  warnings?: number;
+  held_reason?: string | null;
+  warning_history?: Array<{ reason: string; at: string; by: string }>;
 }
 
 export interface SosRequest {
