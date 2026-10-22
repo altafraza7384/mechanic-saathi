@@ -77,3 +77,26 @@ button.small { width: auto; padding: 8px 12px; font-size: 14px; }
 .status.off { background: #fee2e2; color: #991b1b; }
 .hold-banner { border-color: #fca5a5; background: #fef2f2; }
 .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
+.warn { border-color: #f59e0b; background: #fffbeb; }
+.perm-row {
+  background: #fff;
+  color: #1a1a1a;
+  border: 1px solid #e2e2e2;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  font-weight: 500;
+}
+.perm-row.ok { background: #f0fdf4; border-color: #bbf7d0; }
+.perm-icon { font-size: 28px; flex-shrink: 0; }
+.perm-text { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.perm-check {
+  width: 28px; height: 28px; flex-shrink: 0;
+  border: 2px solid #ccc; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700;
+}
+.perm-check.ok { background: #16a34a; border-color: #16a34a; }
