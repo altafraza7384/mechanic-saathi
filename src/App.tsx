@@ -1,7 +1,12 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
+import { LocalNotifications } from "@capacitor/local-notifications";
 import { AuthProvider, useAuth } from "./lib/auth";
+import { permissionsDone } from "./lib/permissions";
 import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
+import PermissionsPage from "./pages/PermissionsPage";
 import HomePage from "./pages/HomePage";
 import RequestPage from "./pages/RequestPage";
 import JobsPage from "./pages/JobsPage";
@@ -21,10 +26,42 @@ function RequireProfile({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+// One-time onboarding gate for the Permissions screen. Only Home is gated:
+// /request/:id must stay reachable from a tapped notification even if the
+// mechanic skipped permissions, or the request would be lost.
+function RequirePermissions({ children }: { children: ReactNode }) {
+  if (!permissionsDone()) return <Navigate to="/permissions" replace />;
+  return <>{children}</>;
+}
+
+// Notification tap -> open that SOS request. Registered once at app level
+// (not in HomePage) so it also works when the tap relaunches the app.
+function SosNotificationTapHandler() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let listener: { remove: () => Promise<void> } | null = null;
+    LocalNotifications.addListener(
+      "localNotificationActionPerformed",
+      (e) => {
+        const id = (e.notification.extra as { requestId?: string } | undefined)?.requestId;
+        if (id) navigate(`/request/${id}`);
+      },
+    ).then((l) => {
+      listener = l;
+    });
+    return () => {
+      listener?.remove();
+    };
+  }, [navigate]);
+  return null;
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <SosNotificationTapHandler />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route
@@ -36,11 +73,23 @@ export default function App() {
             }
           />
           <Route
+            path="/permissions"
+            element={
+              <RequireAuth>
+                <RequireProfile>
+                  <PermissionsPage />
+                </RequireProfile>
+              </RequireAuth>
+            }
+          />
+          <Route
             path="/"
             element={
               <RequireAuth>
                 <RequireProfile>
-                  <HomePage />
+                  <RequirePermissions>
+                    <HomePage />
+                  </RequirePermissions>
                 </RequireProfile>
               </RequireAuth>
             }
