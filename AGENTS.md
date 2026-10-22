@@ -87,7 +87,16 @@ then marks the job on-way and completed. Launch area is Mumbai first.
 - OTP SMS quota is 10/day on new Firebase projects until Blaze is active.
 - Android phone auth REQUIRES SHA-1 fingerprints in the Firebase console
   (debug + upload + Play signing) at APK build time.
-- No push notifications yet: the app only sees requests while it is OPEN (live
-  Firestore listener). Background delivery needs Cloud Functions + FCM, which
-  are Blaze-gated.
+- Background delivery (2026-10-22): a Permissions onboarding screen
+  (`/permissions`, gated before Home) verifies notifications, draw-over-apps,
+  battery exemption, and vendor autostart via the local
+  `plugins/mechanic-permissions` Capacitor plugin (Java); going ONLINE starts
+  a foreground service so the Firestore listener keeps running while the app
+  is backgrounded, and new requests raise a local notification (tap opens
+  the request). LIMITS: autostart grant state is NOT readable on Android —
+  that row only records that the mechanic opened the vendor screen; the
+  listener lives in HomePage, so a mechanic browsing Jobs/Profile gets no
+  ping until back on Home; and if Android kills the process (or the phone
+  reboots), nothing wakes the app — true push still needs FCM via Cloud
+  Functions, which are Blaze-gated.
 - No staging environment: one Firebase project serves production.
