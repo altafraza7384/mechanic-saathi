@@ -49,7 +49,20 @@ export default function RequestPage() {
   }, [req, user, id]);
 
   const accept = async () => {
-    if (!req || !user || !profile || !id) return;
+    if (!req || !user || !id) return;
+    // Held mechanics cannot accept, and a not-yet-loaded profile must
+    // never accept blind — refuse safely in both cases, before any
+    // transaction runs or the details doc is claimed.
+    if (!profile) {
+      setError("Profile load nahi hui. Page refresh karke dobara try karo.");
+      return;
+    }
+    if (profile.status === "held") {
+      setError(
+        "Aapka account hold par hai, isliye nayi request accept nahi kar sakte.",
+      );
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -140,6 +153,12 @@ export default function RequestPage() {
             Accept karne par driver ka phone number aur exact location
             dikhegi.
           </p>
+          {profile?.status === "held" && (
+            <p className="error">
+              Aapka account hold par hai — nayi request accept nahi kar
+              sakte.
+            </p>
+          )}
           <button onClick={accept} disabled={busy}>
             {busy ? "Accept ho raha hai..." : "✅ Request accept karo"}
           </button>
