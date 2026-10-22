@@ -12,6 +12,11 @@ export interface MechanicProfile {
   name: string;
   shopName: string;
   phone: string;
+  // One-time OTP verification at profile setup (Google login never sends
+  // an OTP). Only a verified number may be saved; changing the number
+  // requires a fresh OTP for the new number.
+  phoneVerified?: boolean;
+  phoneVerifiedAt?: string | null;
   categories: CarSosCategory[];
   charges: string | null;
   workingHours: string | null;
