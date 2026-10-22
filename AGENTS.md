@@ -3,19 +3,26 @@
 ## What this product does
 
 Mechanic Saathi is the mechanic-side companion app to Driver Saathi's "Car SOS"
-feature, sharing the same Firebase project. A mechanic signs in with phone OTP,
-sets up a shop profile (services, charges, hours, service radius, shop GPS
-location), toggles ONLINE, and sees live pending SOS requests from nearby
-stranded drivers filtered by category + radius. Accepting a request reveals the
-driver's phone + exact location with Call and Navigate actions; the mechanic
-then marks the job on-way and completed. Launch area is Mumbai first.
+feature, sharing the same Firebase project. A mechanic signs in with Google
+only (phone OTP login was REMOVED 2026-10-22 by user decision, OTP-cost
+reason), sets up a shop profile (services, charges, hours, service radius,
+shop GPS location) with a ONE-TIME OTP verification of the mobile number at
+profile time, toggles ONLINE, and sees live pending SOS requests from nearby
+stranded drivers filtered by category + radius. Accepting a request reveals
+the driver's phone + exact location with Call and Navigate actions; the
+mechanic then marks the job on-way and completed. Launch area is Mumbai first.
 
 ## Stack (do not change without asking)
 
 - Frontend: Vite + React + TypeScript + plain CSS (no Tailwind/shadcn here).
 - Backend: Firebase project **driver-saathi-app** (shared with Driver Saathi) —
-  Firestore (asia-south1) + Firebase Auth with the **Phone provider**
-  (invisible reCAPTCHA, JS SDK). There is NO custom backend server.
+  Firestore (asia-south1) + Firebase Auth with the **Google provider** for
+  login (native via @capacitor-firebase/authentication 8.5.2 with
+  skipNativeAuth, JS SDK signInWithCredential; web popup + redirect
+  fallback) and the **Phone provider ONLY for one-time number verification**
+  at profile time (linkWithPhoneNumber + invisible reCAPTCHA, JS SDK —
+  never signInWithPhoneNumber, which would switch the session to a
+  different phone-based uid). There is NO custom backend server.
 - Android: Capacitor, package `com.driversaathi.mechanic`. Builds are delivered
   as zips for the user to build on his own computer (the sandbox cannot run
   Gradle). `google-services.json` in `android/app/` is the pre-fingerprint
@@ -99,10 +106,30 @@ then marks the job on-way and completed. Launch area is Mumbai first.
   ping until back on Home; and if Android kills the process (or the phone
   reboots), nothing wakes the app — true push still needs FCM via Cloud
   Functions, which are Blaze-gated.
-- Login persistence (OTP-cost rule, 2026-10-22): auth uses explicit
-  `browserLocalPersistence`, so one OTP login survives app close, full kill,
-  and phone restart — no re-login, no second SMS. The ID token refreshes
-  silently (free). Re-OTP happens only on explicit Logout, app-data clear,
-  or account change. `/login` redirects an already-signed-in mechanic to
-  Home, so the OTP form can never trigger an accidental second SMS.
+- Login = Google only + one-time phone verification (user decision
+  2026-10-22, OTP-cost reason): auth uses explicit
+  `browserLocalPersistence`, so one Google login survives app close, full
+  kill, and phone restart — no re-login at all. The ID token refreshes
+  silently (free). Re-login happens only on explicit Logout, app-data
+  clear, or account change. OTP is sent ONLY at profile time to verify
+  the mobile number (linkWithPhoneNumber); only a verified number is
+  saved on the mechanics doc (`phone` + `phoneVerified: true` +
+  `phoneVerifiedAt`); changing the number requires a fresh OTP for the
+  new number, leaving a verified number untouched needs no OTP. `/login`
+  redirects an already-signed-in mechanic to Home, so no login form can
+  ever trigger an SMS.
+- Google sign-in on Android REQUIRES SHA-1 fingerprints in the Firebase
+  console (debug + upload + Play signing) and a post-fingerprint
+  google-services.json refresh — without them the native plugin returns
+  no ID token and sign-in fails (friendly error tells the user this).
+- First-open safety (user requirement 2026-10-22: install ke baad app
+  khulte hi crash/problem nahi honi chahiye): AuthProvider ALWAYS resolves
+  loading (profile-read failure → null profile, never a stuck loading
+  screen); permission checks are fail-soft (native check failure → all
+  rows "missing", never a crash or false green); Google plugin errors
+  surface as friendly messages, never uncaught. Plugin registration is
+  verified by `cap sync` (capacitor.plugins.json must list
+  FirebaseAuthenticationPlugin) before any zip ships. Real-device open
+  can only be verified on the user's phone (sandbox cannot run Gradle);
+  the zip's BUILD_GUIDE carries a first-open checklist for both apps.
 - No staging environment: one Firebase project serves production.
