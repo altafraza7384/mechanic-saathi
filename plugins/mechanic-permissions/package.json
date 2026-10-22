@@ -1,0 +1,1 @@
+{"capacitor":{"android":{"src":"android"}},"description":"Local Capacitor plugin for Mechanic Saathi: permission-status checks (notifications, draw-over-apps, battery exemption, vendor autostart) and the ONLINE foreground service. Native-only; the JS side registers it by name via @capacitor/core.","main":"index.js","name":"mechanic-permissions","private":true,"version":"1.0.0"}
