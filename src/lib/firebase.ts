@@ -13,12 +13,13 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig);
 // Login persistence (OTP-cost rule): EXPLICIT browserLocalPersistence
-// (IndexedDB/localStorage in the Android WebView). Ek baar OTP se login
+// (IndexedDB/localStorage in the Android WebView). Ek baar Google login
 // hone ke baad session device par save rehta hai — app band karne, fully
-// kill karne ya phone restart karne par bhi dobara OTP nahi mangta.
-// Firebase ID token har ghante khud-b-khud (free) refresh hota hai. OTP
-// sirf tab dobara lagega jab mechanic khud Logout dabaye, app data clear
-// kare, ya account change ho.
+// kill karne ya phone restart karne par bhi dobara login nahi mangta.
+// Firebase ID token har ghante khud-b-khud (free) refresh hota hai.
+// Dobara login sirf tab lagega jab mechanic khud Logout dabaye, app data
+// clear kare, ya account change ho. OTP login ke liye kabhi nahi lagta —
+// OTP sirf ek baar profile me number verify karne ke liye lagta hai.
 export const auth = initializeAuth(app, {
   persistence: browserLocalPersistence,
 });
