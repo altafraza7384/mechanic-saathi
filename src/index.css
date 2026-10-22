@@ -75,4 +75,5 @@ button.small { width: auto; padding: 8px 12px; font-size: 14px; }
 }
 .status.on { background: #dcfce7; color: #166534; }
 .status.off { background: #fee2e2; color: #991b1b; }
+.hold-banner { border-color: #fca5a5; background: #fef2f2; }
 .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
