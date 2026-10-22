@@ -36,24 +36,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       return;
     }
-    const snap = await getDoc(doc(db, "mechanics", auth.currentUser.uid));
-    setProfile(
-      snap.exists() ? ({ id: snap.id, ...snap.data() } as MechanicProfile) : null,
-    );
+    try {
+      const snap = await getDoc(doc(db, "mechanics", auth.currentUser.uid));
+      setProfile(
+        snap.exists() ? ({ id: snap.id, ...snap.data() } as MechanicProfile) : null,
+      );
+    } catch {
+      // A failed profile read must never break the session: the caller
+      // keeps the signed-in user and can retry; a stuck screen is worse
+      // than a missing profile row.
+      setProfile(null);
+    }
   };
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u);
-      if (u) {
-        const snap = await getDoc(doc(db, "mechanics", u.uid));
-        setProfile(
-          snap.exists() ? ({ id: snap.id, ...snap.data() } as MechanicProfile) : null,
-        );
-      } else {
+      try {
+        if (u) {
+          const snap = await getDoc(doc(db, "mechanics", u.uid));
+          setProfile(
+            snap.exists() ? ({ id: snap.id, ...snap.data() } as MechanicProfile) : null,
+          );
+        } else {
+          setProfile(null);
+        }
+      } catch {
+        // First-open safety: if the profile read fails (offline, rules,
+        // network), the app must still reach the login/profile screens —
+        // NEVER stay stuck on "Load ho raha hai...".
         setProfile(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
     return unsub;
   }, []);
@@ -61,6 +76,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await signOut(auth);
     setProfile(null);
+    // Native: also sign out of the FirebaseAuthentication plugin so the
+    // native Google account-chooser state is cleared and the next sign-in
+    // asks for an account again. Best-effort — the JS SDK session (the
+    // source of truth) is already gone at this point.
+    try {
+      const { Capacitor } = await import("@capacitor/core");
+      if (Capacitor.isNativePlatform()) {
+        const { FirebaseAuthentication } = await import(
+          "@capacitor-firebase/authentication"
+        );
+        await FirebaseAuthentication.signOut();
+      }
+    } catch {
+      // Ignore — JS SDK logout already succeeded.
+    }
   };
 
   return (
