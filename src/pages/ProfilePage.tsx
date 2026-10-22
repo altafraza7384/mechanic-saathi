@@ -1,9 +1,15 @@
 import { useState } from "react";
 import { doc, setDoc } from "firebase/firestore";
+import type { ConfirmationResult } from "firebase/auth";
 import { db } from "../lib/firebase";
 import { useAuth } from "../lib/auth";
 import { CATEGORIES, type CarSosCategory } from "../lib/types";
 import { encodeGeohash } from "../lib/geohash";
+import {
+  confirmPhoneVerification,
+  normalizePhone,
+  sendPhoneVerification,
+} from "../lib/phoneVerification";
 import { useNavigate } from "react-router-dom";
 
 async function captureLocation(): Promise<{ lat: number; lng: number }> {
@@ -48,15 +54,85 @@ export default function ProfilePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  // ---- One-time phone verification (the ONLY OTP in the app) ----
+  // Login is Google-only and never sends an SMS. The mobile number is
+  // verified here, once, by OTP — and only a verified number is saved.
+  // Changing the number later requires a fresh OTP for the new number;
+  // leaving an already-verified number untouched needs no OTP at all.
+  const initialVerified: string | null =
+    profile?.phoneVerified && profile.phone
+      ? profile.phone
+      : profile?.phone && user?.phoneNumber === profile.phone
+        ? profile.phone
+        : null;
+  const [phone, setPhone] = useState(profile?.phone ?? "");
+  const [verifiedPhone, setVerifiedPhone] = useState<string | null>(
+    initialVerified,
+  );
+  const [pendingPhone, setPendingPhone] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmationResult | null>(null);
+  const [code, setCode] = useState("");
+  const [sending, setSending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyMsg, setVerifyMsg] = useState("");
+
+  const isPhoneVerified =
+    verifiedPhone !== null && normalizePhone(phone) === verifiedPhone;
+
   const toggleCat = (c: CarSosCategory) =>
     setCats((prev) =>
       prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c],
     );
 
+  const sendOtp = async () => {
+    const full = normalizePhone(phone);
+    if (!full) {
+      setError("Sahi 10-digit mobile number daalo.");
+      return;
+    }
+    setSending(true);
+    setError("");
+    setVerifyMsg("");
+    try {
+      const result = await sendPhoneVerification(full);
+      setPendingPhone(full);
+      setConfirm(result);
+      setVerifyMsg("OTP bhej diya hai. Ek hi OTP lagta hai — login par kabhi nahi.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "OTP bhejne me problem hui.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const verifyOtp = async () => {
+    if (!confirm || code.trim().length < 4) return;
+    setVerifying(true);
+    setError("");
+    try {
+      await confirmPhoneVerification(confirm, code.trim());
+      if (pendingPhone) setVerifiedPhone(pendingPhone);
+      setConfirm(null);
+      setCode("");
+      setPendingPhone(null);
+      setVerifyMsg("Number verified ho gaya.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Galat OTP. Dobara try karo.");
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   const save = async () => {
     if (!user) return;
     if (!name.trim() || !shopName.trim() || cats.length === 0) {
       setError("Naam, shop ka naam aur kam se kam ek service chuno.");
+      return;
+    }
+    if (!isPhoneVerified || !verifiedPhone) {
+      setError(
+        "Pehle mobile number verify karo — OTP bhejo, phir code daal kar verify karo. Bina verify kiye number save nahi hoga.",
+      );
       return;
     }
     setBusy(true);
@@ -67,7 +143,13 @@ export default function ProfilePage() {
         {
           name: name.trim(),
           shopName: shopName.trim(),
-          phone: user.phoneNumber ?? "",
+          // Only ever the OTP-verified number — never raw typed input.
+          phone: verifiedPhone,
+          phoneVerified: true,
+          phoneVerifiedAt:
+            profile?.phoneVerifiedAt && profile.phone === verifiedPhone
+              ? profile.phoneVerifiedAt
+              : new Date().toISOString(),
           categories: cats,
           charges: charges.trim() || null,
           workingHours: hours.trim() || null,
@@ -102,6 +184,51 @@ export default function ProfilePage() {
       <input value={name} onChange={(e) => setName(e.target.value)} />
       <label>Shop / Garage ka naam</label>
       <input value={shopName} onChange={(e) => setShopName(e.target.value)} />
+      <label>Mobile number (driver isi par call karega)</label>
+      <div id="phone-verify-recaptcha-container" />
+      <input
+        type="tel"
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+        placeholder="9876543210"
+      />
+      {isPhoneVerified ? (
+        <p className="muted">✓ Number verified: {verifiedPhone}</p>
+      ) : !confirm ? (
+        <>
+          <p className="muted">
+            Number ek baar OTP se verify hoga. Uske baad login par kabhi OTP
+            nahi lagega.
+          </p>
+          <button className="ghost" onClick={sendOtp} disabled={sending}>
+            {sending ? "OTP bhej rahe hain..." : "OTP bhejo (ek baar)"}
+          </button>
+        </>
+      ) : (
+        <>
+          <label>OTP daalo</label>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="6-digit OTP"
+          />
+          <button onClick={verifyOtp} disabled={verifying}>
+            {verifying ? "Check kar rahe hain..." : "Verify karo"}
+          </button>
+          <button
+            className="ghost"
+            onClick={() => {
+              setConfirm(null);
+              setPendingPhone(null);
+            }}
+          >
+            Number badlo
+          </button>
+        </>
+      )}
+      {verifyMsg && <p className="muted">{verifyMsg}</p>}
       <label>Services (ek se zyada chun sakte ho)</label>
       <div className="chips">
         {CATEGORIES.map((c) => (
