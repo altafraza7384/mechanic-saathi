@@ -5,7 +5,8 @@ import {
 } from "firebase/auth";
 import type { ConfirmationResult } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "../lib/auth";
+import { Navigate, useNavigate } from "react-router-dom";
 
 declare global {
   interface Window {
@@ -23,12 +24,26 @@ function getRecaptcha(): RecaptchaVerifier {
 }
 
 export default function LoginPage() {
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [confirm, setConfirm] = useState<ConfirmationResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  // OTP-cost guard: pehle se logged-in mechanic ko OTP form kabhi mat
+  // dikhao — warna galti se dobara "OTP bhejo" dabne par ek aur SMS ka
+  // kharcha lagta. Logged-in user seedha Home flow me jata hai (profile
+  // na ho to RequireProfile use /profile bhej dega).
+  if (loading) {
+    return (
+      <div className="page">
+        <p className="muted">Load ho raha hai...</p>
+      </div>
+    );
+  }
+  if (user) return <Navigate to="/" replace />;
 
   const sendCode = async () => {
     const digits = phone.replace(/\D/g, "");
