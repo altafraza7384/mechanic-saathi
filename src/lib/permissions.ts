@@ -96,7 +96,21 @@ export async function getPermissionRows(): Promise<PermissionRow[]> {
       { kind: "autostart", state: "notNeeded" },
     ];
   }
-  const s = await Native.checkStatus();
+  // First-open safety: if the native check throws (e.g. plugin not
+  // registered in this build), report everything as missing instead of
+  // crashing or falsely showing green — the mechanic can still proceed
+  // via "Phir bhi aage badhein".
+  let s: NativeStatus;
+  try {
+    s = await Native.checkStatus();
+  } catch {
+    return [
+      { kind: "notifications", state: "missing" },
+      { kind: "overlay", state: "missing" },
+      { kind: "battery", state: "missing" },
+      { kind: "autostart", state: "missing" },
+    ];
+  }
   let autostartConfirmed = false;
   try {
     autostartConfirmed = localStorage.getItem(AUTOSTART_CONFIRMED_KEY) === "1";
