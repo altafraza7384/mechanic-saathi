@@ -99,4 +99,10 @@ then marks the job on-way and completed. Launch area is Mumbai first.
   ping until back on Home; and if Android kills the process (or the phone
   reboots), nothing wakes the app — true push still needs FCM via Cloud
   Functions, which are Blaze-gated.
+- Login persistence (OTP-cost rule, 2026-10-22): auth uses explicit
+  `browserLocalPersistence`, so one OTP login survives app close, full kill,
+  and phone restart — no re-login, no second SMS. The ID token refreshes
+  silently (free). Re-OTP happens only on explicit Logout, app-data clear,
+  or account change. `/login` redirects an already-signed-in mechanic to
+  Home, so the OTP form can never trigger an accidental second SMS.
 - No staging environment: one Firebase project serves production.
