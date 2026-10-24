@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   doc,
-  getDoc,
   onSnapshot,
   runTransaction,
   updateDoc,
@@ -21,6 +20,8 @@ export default function RequestPage() {
   const navigate = useNavigate();
   const [req, setReq] = useState<SosRequest | null>(null);
   const [details, setDetails] = useState<SosRequestDetails | null>(null);
+  const [detailsError, setDetailsError] = useState(false);
+  const [detailsRetry, setDetailsRetry] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notFound, setNotFound] = useState(false);
@@ -33,20 +34,31 @@ export default function RequestPage() {
         return;
       }
       setReq({ id: snap.id, ...snap.data() } as SosRequest);
+    }, () => {
+      // A failed listener used to leave a stale/empty page with no
+      // message (audit 2026-10-24).
+      setError("Request load nahi ho payi. Page refresh karke dobara try karo.");
     });
     return unsub;
   }, [id]);
 
   // Once this mechanic owns the request, load the private details doc
-  // (driver phone + exact location).
+  // (driver phone + exact location) via a live listener, not a one-shot
+  // getDoc: a single failed fetch used to strand the mechanic forever
+  // on "Driver ki detail load ho rahi hai..." with no retry (audit
+  // 2026-10-24).
   useEffect(() => {
     if (!req || req.mechanicId !== user?.uid || !id) return;
-    getDoc(doc(db, "sos_request_details", id)).then((snap) => {
+    setDetailsError(false);
+    const unsub = onSnapshot(doc(db, "sos_request_details", id), (snap) => {
       if (snap.exists()) {
         setDetails({ id: snap.id, ...snap.data() } as SosRequestDetails);
       }
+    }, () => {
+      setDetailsError(true);
     });
-  }, [req, user, id]);
+    return unsub;
+  }, [req, user, id, detailsRetry]);
 
   const accept = async () => {
     if (!req || !user || !id) return;
@@ -188,6 +200,13 @@ export default function RequestPage() {
               <a href={`tel:${details.driverPhone}`}>
                 <button>📞 Driver ko call karo</button>
               </a>
+            </>
+          ) : detailsError ? (
+            <>
+              <p className="error">Driver ki detail load nahi ho payi.</p>
+              <button className="ghost" onClick={() => setDetailsRetry((n) => n + 1)}>
+                Dobara try karo
+              </button>
             </>
           ) : (
             <p className="muted">Driver ki detail load ho rahi hai...</p>

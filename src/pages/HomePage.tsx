@@ -26,6 +26,7 @@ export default function HomePage() {
   const { user, profile, refreshProfile, logout } = useAuth();
   const navigate = useNavigate();
   const [requests, setRequests] = useState<SosRequest[]>([]);
+  const [loadError, setLoadError] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [holdNotice, setHoldNotice] = useState(false);
   const [permBanner, setPermBanner] = useState(false);
@@ -48,11 +49,16 @@ export default function HomePage() {
       where("status", "==", "pending"),
     );
     const unsub = onSnapshot(q, (snap) => {
+      setLoadError(false);
       const rows = snap.docs.map(
         (d) => ({ id: d.id, ...d.data() }) as SosRequest,
       );
       rows.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
       setRequests(rows);
+    }, () => {
+      // A failed listener used to leave a silent empty list (audit
+      // 2026-10-24): show the failure instead of "koi request nahi".
+      setLoadError(true);
     });
     return unsub;
   }, []);
@@ -254,6 +260,11 @@ export default function HomePage() {
         </p>
       ) : (
         <>
+          {loadError && (
+            <p className="error">
+              Requests load nahi ho paye, page refresh karke dobara try karo.
+            </p>
+          )}
           <h2>
             Nayi requests {profile.isOnline ? `(${visible.length})` : ""}
           </h2>
