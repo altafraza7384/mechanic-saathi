@@ -3,6 +3,7 @@ import { useAuth } from "../lib/auth";
 import { signInWithGoogle } from "../lib/googleAuth";
 import { Navigate, useNavigate } from "react-router-dom";
 
+
 // Login = Google ONLY (user decision 2026-10-22, OTP-cost reason).
 // OTP yahan kabhi nahi bheja jata — OTP sirf ek baar profile setup me
 // mobile number verify karne ke liye lagta hai (see phoneVerification.ts).
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+
   if (loading) {
     return (
       <div className="page">
@@ -23,6 +25,7 @@ export default function LoginPage() {
     );
   }
   if (user) return <Navigate to="/" replace />;
+
 
   const handleGoogle = async () => {
     setBusy(true);
@@ -42,8 +45,10 @@ export default function LoginPage() {
     }
   };
 
+
   return (
     <div className="page">
+      <img src="/favicon.png" alt="" style={{ width: 96, height: 96 }} />
       <h1>🔧 Mechanic Saathi</h1>
       <p className="muted">
         Driver ki Car SOS request paane ke liye Google se login karo.
