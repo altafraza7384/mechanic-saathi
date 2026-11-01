@@ -61,7 +61,13 @@ mechanic then marks the job on-way and completed. Launch area is Mumbai first.
 - Typecheck: `bun x tsc -b` (or the repo's typecheck script)
 - Build: `bun run build` (emits `dist/`)
 - Android sync (after a fresh clone + build): `bun x cap add android`,
-  place `google-services.json` in `android/app/`, then `bun x cap sync android`
+  place `google-services.json` in `android/app/`, then `bun run android:sync`
+  (= `cap sync android` + `scripts/patch-android.mjs`). android/ is generated
+  and not committed, so the patch re-applies two required edits on every
+  fresh clone: `rgcfaIncludeGoogle = true` in `android/variables.gradle`
+  (Google Sign-In libraries for @capacitor-firebase/authentication) and the
+  ACCESS_COARSE/FINE_LOCATION permissions in `AndroidManifest.xml` (shop GPS).
+  Idempotent; `bun run cap:patch` runs the patch alone.
 
 ## Data model (shared Firebase project)
 
