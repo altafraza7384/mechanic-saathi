@@ -62,7 +62,7 @@ export async function sendPhoneVerification(
         "Bahut zyada try ho gaya hai. Kuch der baad dobara try karo.",
       );
     }
-    throw new Error("OTP bhejne me problem hui. Dobara try karo.");
+    throw new Error(`OTP bhejne me problem hui (${code || "unknown"}). Dobara try karo.`);
   }
 }
 
