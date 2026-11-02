@@ -192,8 +192,8 @@ export default function ProfilePage() {
       <input value={shopName} onChange={(e) => setShopName(e.target.value)} />
       <label>Mobile number (driver isi par call karega)</label>
       <div id="phone-verify-recaptcha-container" />
-      <div style=\{\{ display: "flex", alignItems: "center", gap: "8px" \}\}>
-        <span>+91</span>
+      <div className="phone-field"\>
+        <span className="phone-prefix">+91</span>
         <input
           type="tel"
           value=\{phone\}
@@ -207,7 +207,7 @@ export default function ProfilePage() {
         />
       </div>
       {isPhoneVerified ? (
-        <p className="muted">✓ Number verified: {verifiedPhone}</p>
+        <p className="verify-ok">✓ Number verified: {verifiedPhone}</p>
       ) : !confirm ? (
         <>
           <p className="muted">
@@ -215,8 +215,8 @@ export default function ProfilePage() {
             nahi lagega.
           </p>
           {profile?.phone && !profile?.phoneVerified && (
-            <p className="muted">
-              Number save hai, verification pending hai — admin aapko call karke number confirm karenge.
+            <p className="verify-pending">
+              ⏳ Number save hai, verification pending hai — admin aapko call karke number confirm karenge.
             </p>
           )}
           <button className="ghost" onClick={sendOtp} disabled={sending}>
