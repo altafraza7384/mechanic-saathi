@@ -100,3 +100,49 @@ button.small { width: auto; padding: 8px 12px; font-size: 14px; }
   color: #fff; font-weight: 700;
 }
 .perm-check.ok { background: #16a34a; border-color: #16a34a; }
+.phone-field {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.phone-field:focus-within {
+  border-color: #ea580c;
+  box-shadow: 0 0 0 2px #ffedd5;
+}
+.phone-prefix {
+  padding: 12px 12px 12px 14px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+  background: #f6f6f6;
+  border-right: 1px solid #e2e2e2;
+  flex-shrink: 0;
+}
+.phone-field input {
+  width: auto;
+  flex: 1;
+  border: none;
+  border-radius: 0;
+  outline: none;
+}
+.verify-ok {
+  background: #dcfce7;
+  color: #166534;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px;
+  border-radius: 10px;
+  margin: 0;
+}
+.verify-pending {
+  background: #fffbeb;
+  border: 1px solid #f59e0b;
+  color: #92400e;
+  font-size: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  margin: 0;
+}
