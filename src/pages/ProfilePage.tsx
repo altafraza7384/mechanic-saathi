@@ -65,7 +65,7 @@ export default function ProfilePage() {
       : profile?.phone && user?.phoneNumber === profile.phone
         ? profile.phone
         : null;
-  const [phone, setPhone] = useState(profile?.phone ?? "");
+  const [phone, setPhone] = useState(profile?.phone?.replace(/^\+91/, "") ?? "");
   const [verifiedPhone, setVerifiedPhone] = useState<string | null>(
     initialVerified,
   );
@@ -186,12 +186,20 @@ export default function ProfilePage() {
       <input value={shopName} onChange={(e) => setShopName(e.target.value)} />
       <label>Mobile number (driver isi par call karega)</label>
       <div id="phone-verify-recaptcha-container" />
-      <input
-        type="tel"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        placeholder="9876543210"
-      />
+      <div style=\{\{ display: "flex", alignItems: "center", gap: "8px" \}\}>
+        <span>+91</span>
+        <input
+          type="tel"
+          value=\{phone\}
+          onChange=\{(e) => \{
+            let digits = e.target.value.replace(/\D/g, "");
+            if (digits.startsWith("91") && digits.length > 10) digits = digits.slice(2);
+            setPhone(digits.slice(0, 10));
+          \}\}
+          placeholder="9876543210"
+          inputMode="numeric"
+        />
+      </div>
       {isPhoneVerified ? (
         <p className="muted">✓ Number verified: {verifiedPhone}</p>
       ) : !confirm ? (
