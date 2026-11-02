@@ -56,9 +56,12 @@ export default function ProfilePage() {
 
   // ---- One-time phone verification (the ONLY OTP in the app) ----
   // Login is Google-only and never sends an SMS. The mobile number is
-  // verified here, once, by OTP — and only a verified number is saved.
-  // Changing the number later requires a fresh OTP for the new number;
-  // leaving an already-verified number untouched needs no OTP at all.
+  // verified once — by OTP when it works, or manually by the admin
+  // (the admin calls the number, then marks it verified in the admin
+  // panel). A profile can be saved with an unverified number; it stays
+  // pending until the admin verifies it. Changing the number later
+  // requires fresh verification for the new number; leaving an
+  // already-verified number untouched needs no OTP at all.
   const initialVerified: string | null =
     profile?.phoneVerified && profile.phone
       ? profile.phone
@@ -129,10 +132,9 @@ export default function ProfilePage() {
       setError("Naam, shop ka naam aur kam se kam ek service chuno.");
       return;
     }
-    if (!isPhoneVerified || !verifiedPhone) {
-      setError(
-        "Pehle mobile number verify karo — OTP bhejo, phir code daal kar verify karo. Bina verify kiye number save nahi hoga.",
-      );
+    const fullPhone = normalizePhone(phone);
+    if (!fullPhone) {
+      setError("Sahi 10-digit mobile number daalo.");
       return;
     }
     setBusy(true);
@@ -143,13 +145,16 @@ export default function ProfilePage() {
         {
           name: name.trim(),
           shopName: shopName.trim(),
-          // Only ever the OTP-verified number — never raw typed input.
-          phone: verifiedPhone,
-          phoneVerified: true,
+          // OTP-verified number when verified, otherwise the typed number
+          // as pending — the admin verifies pending numbers by calling.
+          phone: isPhoneVerified && verifiedPhone ? verifiedPhone : fullPhone,
+          phoneVerified: isPhoneVerified && verifiedPhone ? true : false,
           phoneVerifiedAt:
-            profile?.phoneVerifiedAt && profile.phone === verifiedPhone
-              ? profile.phoneVerifiedAt
-              : new Date().toISOString(),
+            isPhoneVerified && verifiedPhone
+              ? profile?.phoneVerifiedAt && profile.phone === verifiedPhone
+                ? profile.phoneVerifiedAt
+                : new Date().toISOString()
+              : null,
           categories: cats,
           charges: charges.trim() || null,
           workingHours: hours.trim() || null,
@@ -158,7 +163,8 @@ export default function ProfilePage() {
           geohash: loc ? encodeGeohash(loc.lat, loc.lng, 7) : null,
           serviceRadiusKm: radius,
           isOnline: profile?.isOnline ?? false,
-          isVerified: profile?.isVerified ?? false,
+          // isVerified is admin-managed and must never be written by the app:
+          // including it here denied the very first save (create rule blocks it).
           rating: profile?.rating ?? null,
           totalJobs: profile?.totalJobs ?? 0,
           updated_at: new Date().toISOString(),
@@ -208,6 +214,11 @@ export default function ProfilePage() {
             Number ek baar OTP se verify hoga. Uske baad login par kabhi OTP
             nahi lagega.
           </p>
+          {profile?.phone && !profile?.phoneVerified && (
+            <p className="muted">
+              Number save hai, verification pending hai — admin aapko call karke number confirm karenge.
+            </p>
+          )}
           <button className="ghost" onClick={sendOtp} disabled={sending}>
             {sending ? "OTP bhej rahe hain..." : "OTP bhejo (ek baar)"}
           </button>
