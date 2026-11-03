@@ -1,6 +1,7 @@
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { categoryLabel, type SosRequest } from "./types";
+import { t } from "./i18n";
 
 /**
  * Permission onboarding + background-service bridge for Mechanic Saathi.
@@ -165,7 +166,7 @@ export async function ensureSosChannel(): Promise<void> {
     await LocalNotifications.createChannel({
       id: SOS_CHANNEL_ID,
       name: "SOS Requests",
-      description: "Nayi SOS requests ke alerts",
+      description: t("notif.channelDesc"),
       importance: 4,
       vibration: true,
     });
@@ -190,8 +191,8 @@ export async function notifyNewRequest(r: SosRequest): Promise<void> {
       notifications: [
         {
           id: hashRequestId(r.id),
-          title: `Nayi SOS request — ${categoryLabel(r.category)}`,
-          body: r.areaText ?? "Nayi request aayi hai, turant dekho",
+          title: t("notif.title", { n: categoryLabel(r.category) }),
+          body: r.areaText ?? t("notif.fallbackBody"),
           extra: { requestId: r.id },
           channelId: SOS_CHANNEL_ID,
         },
