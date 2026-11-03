@@ -60,9 +60,10 @@ function SosNotificationTapHandler() {
 }
 
 function BottomNav() {
-    const { user } = useAuth();
+    const { user, profile, loading } = useAuth();
     const location = useLocation();
-    if (!user) return null;
+    if (!user) return null;  
+  if (!loading && !profile && location.pathname === "/profile") return null;
     const items = [
       { to: "/", label: t("nav.requests") },
       { to: "/jobs", label: t("nav.jobs") },
@@ -75,7 +76,7 @@ function BottomNav() {
                     <Link
                                 key={item.to}
                                 to={item.to}
-                                className={location.pathname === item.to ? "on" : ""}
+                                className={location.pathname === item.to || (item.to === "/" && location.pathname.startsWith("/request/")) ? "on" : ""}
                               >
                       {item.label}
                     </Link>
