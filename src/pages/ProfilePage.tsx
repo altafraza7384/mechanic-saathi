@@ -267,7 +267,7 @@ export default function ProfilePage() {
         value={charges}
         onChange={(e) => setCharges(e.target.value)}
         placeholder={t("profile.optional")}
-            />
+      />
             <h2>{t("profile.secCoverage")}</h2>
       <label>{t("profile.hours")}</label>
       <input
