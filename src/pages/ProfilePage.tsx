@@ -11,6 +11,7 @@ import {
   sendPhoneVerification,
 } from "../lib/phoneVerification";
 import { useNavigate } from "react-router-dom";
+import { t } from "../lib/i18n";
 
 async function captureLocation(): Promise<{ lat: number; lng: number }> {
   try {
@@ -90,7 +91,7 @@ export default function ProfilePage() {
   const sendOtp = async () => {
     const full = normalizePhone(phone);
     if (!full) {
-      setError("Sahi 10-digit mobile number daalo.");
+      setError(t("profile.errPhone"));
       return;
     }
     setSending(true);
@@ -100,9 +101,9 @@ export default function ProfilePage() {
       const result = await sendPhoneVerification(full);
       setPendingPhone(full);
       setConfirm(result);
-      setVerifyMsg("OTP bhej diya hai. Ek hi OTP lagta hai — login par kabhi nahi.");
+      setVerifyMsg(t("profile.otpSentMsg"));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "OTP bhejne me problem hui.");
+      setError(e instanceof Error ? e.message : t("profile.errOtpSend"));
     } finally {
       setSending(false);
     }
@@ -118,9 +119,9 @@ export default function ProfilePage() {
       setConfirm(null);
       setCode("");
       setPendingPhone(null);
-      setVerifyMsg("Number verified ho gaya.");
+      setVerifyMsg(t("profile.verifiedMsg"));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Galat OTP. Dobara try karo.");
+      setError(e instanceof Error ? e.message : t("profile.errOtpWrong"));
     } finally {
       setVerifying(false);
     }
@@ -129,12 +130,12 @@ export default function ProfilePage() {
   const save = async () => {
     if (!user) return;
     if (!name.trim() || !shopName.trim() || cats.length === 0) {
-      setError("Naam, shop ka naam aur kam se kam ek service chuno.");
+      setError(t("profile.errForm"));
       return;
     }
     const fullPhone = normalizePhone(phone);
     if (!fullPhone) {
-      setError("Sahi 10-digit mobile number daalo.");
+      setError(t("profile.errPhone"));
       return;
     }
     setBusy(true);
@@ -174,7 +175,7 @@ export default function ProfilePage() {
       await refreshProfile();
       navigate("/", { replace: true });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Save karne me problem hui.");
+      setError(e instanceof Error ? e.message : t("profile.errSave"));
     } finally {
       setBusy(false);
     }
@@ -182,15 +183,15 @@ export default function ProfilePage() {
 
   return (
     <div className="page">
-      <h1>Apni profile</h1>
+      <h1>{t("profile.title")}</h1>
       <p className="muted">
-        Driver ko tumhari shop aur services isi se dikhengi.
+        {t("profile.desc")}
       </p>
-      <label>Apna naam</label>
+      <label>{t("profile.name")}</label>
       <input value={name} onChange={(e) => setName(e.target.value)} />
-      <label>Shop / Garage ka naam</label>
+      <label>{t("profile.shop")}</label>
       <input value={shopName} onChange={(e) => setShopName(e.target.value)} />
-      <label>Mobile number (driver isi par call karega)</label>
+      <label>{t("profile.phoneLabel")}</label>
       <div id="phone-verify-recaptcha-container" />
       <div className="phone-field">
         <span className="phone-prefix">+91</span>
@@ -207,34 +208,33 @@ export default function ProfilePage() {
         />
       </div>
       {isPhoneVerified ? (
-        <p className="verify-ok">✓ Number verified: {verifiedPhone}</p>
+        <p className="verify-ok">{t("profile.verified", { n: verifiedPhone })}</p>
       ) : !confirm ? (
         <>
           <p className="muted">
-            Number ek baar OTP se verify hoga. Uske baad login par kabhi OTP
-            nahi lagega.
+            {t("profile.otpHint")}
           </p>
           {profile?.phone && !profile?.phoneVerified && (
             <p className="verify-pending">
-              ⏳ Number save hai, verification pending hai — admin aapko call karke number confirm karenge.
+              {t("profile.pending")}
             </p>
           )}
           <button className="ghost" onClick={sendOtp} disabled={sending}>
-            {sending ? "OTP bhej rahe hain..." : "OTP bhejo (ek baar)"}
+            {sending ? t("profile.sendingOtp") : t("profile.sendOtp")}
           </button>
         </>
       ) : (
         <>
-          <label>OTP daalo</label>
+          <label>{t("profile.enterOtp")}</label>
           <input
             type="text"
             inputMode="numeric"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            placeholder="6-digit OTP"
+            placeholder={t("profile.otpPlaceholder")}
           />
           <button onClick={verifyOtp} disabled={verifying}>
-            {verifying ? "Check kar rahe hain..." : "Verify karo"}
+            {verifying ? t("profile.verifying") : t("profile.verifyBtn")}
           </button>
           <button
             className="ghost"
@@ -243,12 +243,12 @@ export default function ProfilePage() {
               setPendingPhone(null);
             }}
           >
-            Number badlo
+            {t("profile.changeNumber")}
           </button>
         </>
       )}
       {verifyMsg && <p className="muted">{verifyMsg}</p>}
-      <label>Services (ek se zyada chun sakte ho)</label>
+      <label>{t("profile.services")}</label>
       <div className="chips">
         {CATEGORIES.map((c) => (
           <button
@@ -260,19 +260,19 @@ export default function ProfilePage() {
           </button>
         ))}
       </div>
-      <label>Charges (jaise: Tyre ₹300 se, Battery ₹500 se)</label>
+      <label>{t("profile.charges")}</label>
       <input
         value={charges}
         onChange={(e) => setCharges(e.target.value)}
-        placeholder="Optional"
+        placeholder={t("profile.optional")}
       />
-      <label>Kaam ke hours (jaise: 9 AM – 9 PM)</label>
+      <label>{t("profile.hours")}</label>
       <input
         value={hours}
         onChange={(e) => setHours(e.target.value)}
-        placeholder="Optional"
+        placeholder={t("profile.optional")}
       />
-      <label>Service radius: {radius} km</label>
+      <label>{t("profile.radius", { n: radius })}</label>
       <input
         type="range"
         min={5}
@@ -289,20 +289,20 @@ export default function ProfilePage() {
           try {
             setLoc(await captureLocation());
           } catch {
-            setError("Location nahi mili. GPS on karke dobara try karo.");
+            setError(t("profile.errLocation"));
           } finally {
             setLocating(false);
           }
         }}
       >
         {loc
-          ? `📍 Shop location set: ${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`
+          ? t("profile.locationSet", { lat: loc.lat.toFixed(4), lng: loc.lng.toFixed(4) })
           : locating
-            ? "Location le rahe hain..."
-            : "📍 Shop ki location set karo"}
+            ? t("profile.locating")
+            : t("profile.setLocation")}
       </button>
       <button onClick={save} disabled={busy}>
-        {busy ? "Save ho raha hai..." : "Save karo"}
+        {busy ? t("profile.saving") : t("profile.save")}
       </button>
       {error && <p className="error">{error}</p>}
     </div>
