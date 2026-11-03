@@ -1,0 +1,24 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Merged into the app manifest by cap sync. -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <uses-permission android:name="android.permission.VIBRATE" />
+  <!-- Android 14+: fullScreenIntent is ignored without this declaration.
+       Sideloaded (debug) builds get it at install; a Play release needs a
+       Play declaration justifying the call-style use. -->
+  <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+  <application>
+    <service
+      android:name=".SosMessagingService"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="com.google.firebase.MESSAGING_EVENT" />
+      </intent-filter>
+    </service>
+    <activity
+      android:name=".FullscreenActivity"
+      android:exported="false"
+      android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar"
+      android:showWhenLocked="true"
+      android:turnScreenOn="true" />
+  </application>
+</manifest>
