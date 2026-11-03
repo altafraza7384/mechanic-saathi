@@ -192,16 +192,16 @@ export default function ProfilePage() {
       <input value={shopName} onChange={(e) => setShopName(e.target.value)} />
       <label>Mobile number (driver isi par call karega)</label>
       <div id="phone-verify-recaptcha-container" />
-      <div className="phone-field"\>
+      <div className="phone-field">
         <span className="phone-prefix">+91</span>
         <input
           type="tel"
-          value=\{phone\}
-          onChange=\{(e) => \{
+          value={phone}
+          onChange={(e) => {
             let digits = e.target.value.replace(/\D/g, "");
             if (digits.startsWith("91") && digits.length > 10) digits = digits.slice(2);
             setPhone(digits.slice(0, 10));
-          \}\}
+          }}
           placeholder="9876543210"
           inputMode="numeric"
         />
