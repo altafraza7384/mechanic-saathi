@@ -20,6 +20,8 @@ import {
   startOnlineService,
   stopOnlineService,
 } from "../lib/permissions";
+import { cancelFullscreenNotification, readLaunchAction, registerFcmToken } from "../lib/fullscreenNotify";
+
 import { Link, useNavigate } from "react-router-dom";
 import { t } from "../lib/i18n";
 
@@ -88,10 +90,11 @@ export default function HomePage() {
     if (profile.isOnline && profile.status !== "held") {
       ensureSosChannel();
       startOnlineService();
+      if (user) void registerFcmToken(user.uid);
     } else {
       stopOnlineService();
     }
-  }, [profile?.isOnline, profile?.status]);
+  }, [user, profile?.isOnline, profile?.status]);
 
   // New-request notifications. Only arrivals AFTER the first online snapshot
   // ping — the backlog on first open just shows in the list. While offline
@@ -104,6 +107,7 @@ export default function HomePage() {
     if (!profile?.isOnline || profile?.status === "held") {
       notifiedRef.current.forEach((id) => {
         cancelRequestNotification(id);
+        void cancelFullscreenNotification(id);
       });
       notifiedRef.current.clear();
       return;
@@ -124,10 +128,32 @@ export default function HomePage() {
       if (!visible.some((r) => r.id === id)) {
         notifiedRef.current.delete(id);
         cancelRequestNotification(id);
+        void cancelFullscreenNotification(id);
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, profile?.isOnline, profile?.status]);
+
+  // Full-screen popup Accept: the native side stored a read-once action;
+  // open the request page so the mechanic taps Accept there (the accept
+  // transaction still guards against double-claim). Checked on mount and
+  // whenever the app regains focus, so it also fires when the app was
+  // already open on another page.
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      const launch = await readLaunchAction();
+      if (!cancelled && launch?.action === "accept") {
+        navigate(`/request/${launch.requestId}`);
+      }
+    };
+    void check();
+    window.addEventListener("focus", check);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", check);
+    };
+  }, [navigate]);
 
   // Permission banner: re-checked on mount and whenever the mechanic
   // returns to Home (e.g. from the Permissions screen).
