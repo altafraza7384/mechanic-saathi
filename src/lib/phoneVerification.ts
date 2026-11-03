@@ -4,6 +4,7 @@ import {
   type ConfirmationResult,
 } from "firebase/auth";
 import { auth } from "./firebase";
+import { t } from "./i18n";
 
 /**
  * One-time phone verification at profile/biodata time — the ONLY place an
@@ -40,7 +41,7 @@ export async function sendPhoneVerification(
   fullPhone: string,
 ): Promise<ConfirmationResult> {
   const user = auth.currentUser;
-  if (!user) throw new Error("Pehle Google se login karo.");
+  if (!user) throw new Error(t("otp.loginFirst"));
   resetVerifier();
   verifier = new RecaptchaVerifier(auth, "phone-verify-recaptcha-container", {
     size: "invisible",
@@ -50,19 +51,15 @@ export async function sendPhoneVerification(
   } catch (e) {
     const code = (e as { code?: string })?.code ?? "";
     if (code === "auth/credential-already-in-use") {
-      throw new Error("Ye number kisi aur account se juda hua hai.");
+      throw new Error(t("otp.alreadyUsed"));
     }
     if (code === "auth/requires-recent-login") {
-      throw new Error(
-        "Session purani ho gayi hai. Logout karke dobara Google se login karo, phir verify karo.",
-      );
+      throw new Error(t("otp.sessionOld"));
     }
     if (code === "auth/too-many-requests") {
-      throw new Error(
-        "Bahut zyada try ho gaya hai. Kuch der baad dobara try karo.",
-      );
+      throw new Error(t("otp.tooMany"));
     }
-    throw new Error(`OTP bhejne me problem hui (${code || "unknown"}). Dobara try karo.`);
+    throw new Error(t("otp.sendError", { code: code || "unknown" }));
   }
 }
 
@@ -74,7 +71,7 @@ export async function confirmPhoneVerification(
   try {
     await confirm.confirm(code);
   } catch {
-    throw new Error("Galat OTP. Dobara try karo.");
+    throw new Error(t("otp.wrong"));
   } finally {
     resetVerifier();
   }
