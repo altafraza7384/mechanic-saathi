@@ -41,7 +41,7 @@ export default function JobsPage() {
   return (
     <div className="page">
       <button className="ghost small" onClick={() => navigate("/")}>
-        ← {t("back")}
+        {t("back")}
       </button>
       <h1>{t("jobs.title")}</h1>
       {loadError && (
