@@ -7,6 +7,7 @@ import {
   type PermissionKind,
   type PermissionRow,
 } from "../lib/permissions";
+import { t } from "../lib/i18n";
 
 const META: Record<
   PermissionKind,
@@ -15,24 +16,22 @@ const META: Record<
   notifications: {
     icon: "🔔",
     title: "Notifications",
-    subtitle: "Nayi request ka alert milega, chahe app background me ho",
+    subtitle: t("perm.subNotifications"),
   },
   overlay: {
     icon: "📱",
     title: "Draw over Other Apps",
-    subtitle: "App background me ho tab bhi request ka popup dikhega",
+    subtitle: t("perm.subOverlay"),
   },
   battery: {
     icon: "🔋",
     title: "Battery Optimization",
-    subtitle:
-      "Battery bachane ke chakkar me phone app ko background me band na kare",
+    subtitle: t("perm.subBattery"),
   },
   autostart: {
     icon: "🔄",
     title: "Autostart",
-    subtitle:
-      "Phone restart ya app band hone ke baad bhi app apne aap chale",
+    subtitle: t("perm.subAutostart"),
   },
 };
 
@@ -92,14 +91,12 @@ export default function PermissionsPage() {
 
   return (
     <div className="page">
-      <h1>Permissions Required</h1>
+      <h1>{t("perm.title")}</h1>
       <p className="muted">
-        Requests miss na hon, isliye ye 4 settings ON honi chahiye. Jo row
-        grey hai us par tap karo — sahi settings khul jayengi. Wapas aate hi
-        status dobara check ho jayega.
+        {t("perm.desc")}
       </p>
 
-      {loading && <p className="muted">Status check ho raha hai...</p>}
+      {loading && <p className="muted">{t("perm.checking")}</p>}
 
       <div className="list">
         {rows.map((r) => {
@@ -118,14 +115,12 @@ export default function PermissionsPage() {
                 <span className="muted small">{meta.subtitle}</span>
                 {r.kind === "autostart" && r.state === "granted" && (
                   <span className="muted small">
-                    Note: Autostart ki haalat Android se poochhi nahi ja
-                    sakti — ye row settings kholne par green hoti hai.
-                    Wahan Autostart ON zaroor rakhein.
+                    {t("perm.autostartNote")}
                   </span>
                 )}
                 {r.state === "notNeeded" && (
                   <span className="muted small">
-                    Is device par ye setting hoti hi nahi — zaroori nahi.
+                    {t("perm.notNeeded")}
                   </span>
                 )}
               </span>
@@ -138,27 +133,26 @@ export default function PermissionsPage() {
       </div>
 
       <button className="ghost" onClick={refresh} disabled={loading}>
-        Dobara check karein
+        {t("perm.recheck")}
       </button>
 
       {confirming && (
         <div className="card warn">
-          <strong>⚠ Kuch settings abhi bhi off hain:</strong>
+          <strong>{t("perm.stillOff")}</strong>
           <span>{missing.map((r) => META[r.kind].title).join(", ")}</span>
           <span className="muted small">
-            Inke bina background me requests miss ho sakti hain. Aap baad me
-            Home se bhi ye settings theek kar sakte ho.
+            {t("perm.stillOffDesc")}
           </span>
-          <button onClick={proceedAnyway}>Phir bhi aage badhein</button>
+          <button onClick={proceedAnyway}>{t("perm.proceed")}</button>
           <button className="ghost" onClick={() => setConfirming(false)}>
-            Pehle settings theek karein
+            {t("perm.fixFirst")}
           </button>
         </div>
       )}
 
       {!confirming && (
         <button onClick={done} disabled={loading}>
-          Done
+          {t("perm.done")}
         </button>
       )}
     </div>
