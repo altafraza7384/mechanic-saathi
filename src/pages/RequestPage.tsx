@@ -26,6 +26,7 @@ export default function RequestPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notFound, setNotFound] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
 
   useEffect(() => {
     if (!id) return;
@@ -107,11 +108,36 @@ export default function RequestPage() {
     }
   };
 
-  const setStatus = async (status: "onway" | "completed") => {
+  const setStatus = async (status: "onway" | "arrived" | "completed") => {
     if (!id) return;
+    if (status === "completed" && !window.confirm(t("req.confirmComplete"))) return;
     setBusy(true);
+    setError("");
     try {
       await updateDoc(doc(db, "sos_requests", id), { status });
+    } catch {
+      setError(t("req.errStatus"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const cancelJob = async () => {
+    if (!id) return;
+    if (!cancelReason.trim()) {
+      setError(t("req.errReason"));
+      return;
+    }
+    if (!window.confirm(t("req.cancelConfirm"))) return;
+    setBusy(true);
+    setError("");
+    try {
+      await updateDoc(doc(db, "sos_requests", id), {
+        status: "cancelled",
+        cancelReason: cancelReason.trim(),
+      });
+    } catch {
+      setError(t("req.errCancel"));
     } finally {
       setBusy(false);
     }
@@ -165,6 +191,16 @@ export default function RequestPage() {
           <p className="muted">
             {t("req.acceptHint")}
           </p>
+          {profile?.charges && (
+            <>
+              <p>
+                {t("req.visitingCharge", { n: profile.charges })}
+              </p>
+              <p className="muted">
+                {t("req.estimateNote")}
+              </p>
+            </>
+          )}
           {profile?.status === "held" && (
             <p className="error">
               {t("req.holdAccept")}
@@ -180,7 +216,7 @@ export default function RequestPage() {
         <p className="error">{t("req.acceptedOther")}</p>
       )}
 
-      {mine && (req.status === "accepted" || req.status === "onway") && (
+      {mine && (req.status === "accepted" || req.status === "onway" || req.status === "arrived") && (
         <div className="card">
           <h2>{t("req.driverDetail")}</h2>
           {details ? (
@@ -216,10 +252,26 @@ export default function RequestPage() {
                 {t("req.onway")}
               </button>
             )}
-            <button onClick={() => setStatus("completed")} disabled={busy}>
-              {t("req.completedBtn")}
-            </button>
+            {req.status === "onway" && (
+              <button onClick={() => setStatus("arrived")} disabled={busy}>
+                {t("req.arrived")}
+              </button>
+            )}
+            {req.status === "arrived" && (
+              <button onClick={() => setStatus("completed")} disabled={busy}>
+                {t("req.completedBtn")}
+              </button>
+            )}
           </div>
+          <label>{t("req.cancelReasonLabel")}</label>
+          <input
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            placeholder={t("req.cancelReasonPlaceholder")}
+          />
+          <button className="ghost" onClick={cancelJob} disabled={busy}>
+            {t("req.cancelBtn")}
+          </button>
         </div>
       )}
 
@@ -230,7 +282,11 @@ export default function RequestPage() {
         </p>
       )}
       {req.status === "cancelled" && (
-        <p className="muted">{t("req.cancelledMsg")}</p>
+        <p className="muted">
+          {req.cancelReason
+            ? t("req.cancelledByMe", { n: req.cancelReason })
+            : t("req.cancelledMsg")}
+        </p>
       )}
       {error && <p className="error">{error}</p>}
     </div>
