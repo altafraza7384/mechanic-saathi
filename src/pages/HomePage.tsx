@@ -278,7 +278,7 @@ export default function HomePage() {
               {visible.map((r) => (
                 <Link key={r.id} to={`/request/${r.id}`} className="card">
                   <strong>{categoryLabel(r.category)}</strong>
-                  <span>{r.areaText ?? t("areaMissing")}</span>
+                  <span>{r.areaText || (r.approxLat !== null && r.approxLng !== null ? t("areaGps") : t("areaMissing"))}</span>
                   {profile?.lat !== null &&
                       profile?.lat !== undefined &&
                     profile?.lng !== null &&
