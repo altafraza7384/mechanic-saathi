@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, Link, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
@@ -59,6 +59,30 @@ function SosNotificationTapHandler() {
   return null;
 }
 
+function BottomNav() {
+    const { user } = useAuth();
+    const location = useLocation();
+    if (!user) return null;
+    const items = [
+      { to: "/", label: t("nav.requests") },
+      { to: "/jobs", label: t("nav.jobs") },
+      { to: "/profile", label: t("nav.profile") },
+      { to: "/permissions", label: t("nav.alerts") },
+        ];
+    return (
+          <nav className="bottom-nav">
+            {items.map((item) => (
+                    <Link
+                                key={item.to}
+                                to={item.to}
+                                className={location.pathname === item.to ? "on" : ""}
+                              >
+                      {item.label}
+                    </Link>
+                  ))}
+          </nav>
+        );
+}
 export default function App() {
   return (
     <AuthProvider>
@@ -118,6 +142,7 @@ export default function App() {
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+                <BottomNav />
       </BrowserRouter>
     </AuthProvider>
   );
