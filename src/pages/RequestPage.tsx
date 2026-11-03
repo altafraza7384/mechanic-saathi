@@ -13,6 +13,7 @@ import {
   type SosRequestDetails,
 } from "../lib/types";
 import { useNavigate, useParams } from "react-router-dom";
+import { t, statusLabel } from "../lib/i18n";
 
 export default function RequestPage() {
   const { id } = useParams();
@@ -37,7 +38,7 @@ export default function RequestPage() {
     }, () => {
       // A failed listener used to leave a stale/empty page with no
       // message (audit 2026-10-24).
-      setError("Request load nahi ho payi. Page refresh karke dobara try karo.");
+      setError(t("req.errLoad"));
     });
     return unsub;
   }, [id]);
@@ -66,12 +67,12 @@ export default function RequestPage() {
     // never accept blind — refuse safely in both cases, before any
     // transaction runs or the details doc is claimed.
     if (!profile) {
-      setError("Profile load nahi hui. Page refresh karke dobara try karo.");
+      setError(t("req.errProfile"));
       return;
     }
     if (profile.status === "held") {
       setError(
-        "Aapka account hold par hai, isliye nayi request accept nahi kar sakte.",
+        t("req.errHold"),
       );
       return;
     }
@@ -83,9 +84,9 @@ export default function RequestPage() {
       await runTransaction(db, async (tx) => {
         const ref = doc(db, "sos_requests", id);
         const snap = await tx.get(ref);
-        if (!snap.exists()) throw new Error("Request nahi mili.");
+        if (!snap.exists()) throw new Error(t("req.errNotFound"));
         if (snap.data().status !== "pending") {
-          throw new Error("Ye request kisi aur ne accept kar li hai.");
+          throw new Error(t("req.errTaken"));
         }
         tx.update(ref, {
           status: "accepted",
@@ -100,7 +101,7 @@ export default function RequestPage() {
         mechanicId: user.uid,
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Accept karne me problem hui.");
+      setError(e instanceof Error ? e.message : t("req.errAccept"));
     } finally {
       setBusy(false);
     }
@@ -119,8 +120,8 @@ export default function RequestPage() {
   if (notFound) {
     return (
       <div className="page">
-        <h1>Request nahi mili</h1>
-        <button onClick={() => navigate("/")}>Wapas jao</button>
+        <h1>{t("req.notFound")}</h1>
+        <button onClick={() => navigate("/")}>{t("backPlain")}</button>
       </div>
     );
   }
@@ -128,7 +129,7 @@ export default function RequestPage() {
   if (!req) {
     return (
       <div className="page">
-        <p className="muted">Request load ho rahi hai...</p>
+        <p className="muted">{t("req.loading")}</p>
       </div>
     );
   }
@@ -147,14 +148,14 @@ export default function RequestPage() {
   return (
     <div className="page">
       <button className="ghost small" onClick={() => navigate("/")}>
-        ← Wapas
+        {t("back")}
       </button>
       <h1>{categoryLabel(req.category)}</h1>
       <p className="muted">
-        Status: <strong>{req.status}</strong>
+        {t("req.status", { n: statusLabel(req.status) })}
       </p>
       {req.description && <p>{req.description}</p>}
-      <p>📍 {req.areaText ?? "Area nahi diya"}</p>
+      <p>📍 {req.areaText ?? t("areaMissing")}</p>
       <p className="muted small">
         {new Date(req.created_at).toLocaleString("en-IN")}
       </p>
@@ -162,28 +163,26 @@ export default function RequestPage() {
       {req.status === "pending" && (
         <>
           <p className="muted">
-            Accept karne par driver ka phone number aur exact location
-            dikhegi.
+            {t("req.acceptHint")}
           </p>
           {profile?.status === "held" && (
             <p className="error">
-              Aapka account hold par hai — nayi request accept nahi kar
-              sakte.
+              {t("req.holdAccept")}
             </p>
           )}
           <button onClick={accept} disabled={busy}>
-            {busy ? "Accept ho raha hai..." : "✅ Request accept karo"}
+            {busy ? t("req.accepting") : t("req.acceptBtn")}
           </button>
         </>
       )}
 
       {req.status === "accepted" && !mine && (
-        <p className="error">Ye request kisi aur mechanic ne accept kar li hai.</p>
+        <p className="error">{t("req.acceptedOther")}</p>
       )}
 
       {mine && (req.status === "accepted" || req.status === "onway") && (
         <div className="card">
-          <h2>Driver ki detail</h2>
+          <h2>{t("req.driverDetail")}</h2>
           {details ? (
             <>
               <p>
@@ -194,31 +193,31 @@ export default function RequestPage() {
               </p>
               {mapsUrl && (
                 <a href={mapsUrl} target="_blank" rel="noreferrer">
-                  <button className="ghost">🗺️ Navigate karo</button>
+                  <button className="ghost">{t("req.navigate")}</button>
                 </a>
               )}
               <a href={`tel:${details.driverPhone}`}>
-                <button>📞 Driver ko call karo</button>
+                <button>{t("req.callDriver")}</button>
               </a>
             </>
           ) : detailsError ? (
             <>
-              <p className="error">Driver ki detail load nahi ho payi.</p>
+              <p className="error">{t("req.detailError")}</p>
               <button className="ghost" onClick={() => setDetailsRetry((n) => n + 1)}>
-                Dobara try karo
+                {t("retry")}
               </button>
             </>
           ) : (
-            <p className="muted">Driver ki detail load ho rahi hai...</p>
+            <p className="muted">{t("req.detailLoading")}</p>
           )}
           <div className="row">
             {req.status === "accepted" && (
               <button onClick={() => setStatus("onway")} disabled={busy}>
-                🚗 Raste me hoon
+                {t("req.onway")}
               </button>
             )}
             <button onClick={() => setStatus("completed")} disabled={busy}>
-              ✔️ Kaam ho gaya
+              {t("req.completedBtn")}
             </button>
           </div>
         </div>
@@ -226,12 +225,12 @@ export default function RequestPage() {
 
       {req.status === "completed" && (
         <p className="muted">
-          Ye job poori ho gayi hai.
-          {req.rating ? ` Driver ne ${req.rating} star diye.` : ""}
+          {t("req.completedMsg")}
+          {req.rating ? t("req.rated", { n: req.rating }) : ""}
         </p>
       )}
       {req.status === "cancelled" && (
-        <p className="muted">Driver ne ye request cancel kar di hai.</p>
+        <p className="muted">{t("req.cancelledMsg")}</p>
       )}
       {error && <p className="error">{error}</p>}
     </div>
