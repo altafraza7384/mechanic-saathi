@@ -19,6 +19,7 @@
     "@capacitor/geolocation": "^8.2.4",
     "@capacitor/local-notifications": "^8.3.1",
     "firebase": "^13.1.0",
+    "fullscreen-notify": "file:plugins/fullscreen-notify",
     "mechanic-permissions": "file:plugins/mechanic-permissions",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
