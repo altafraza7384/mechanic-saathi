@@ -46,10 +46,11 @@ export interface SosRequest {
   approxLng: number | null;
   geohash: string | null;
   areaText: string | null;
-  status: "pending" | "accepted" | "onway" | "completed" | "cancelled";
+  status: "pending" | "accepted" | "onway" | "arrived" | "completed" | "cancelled";
   mechanicId: string | null;
   mechanicName: string | null;
   mechanicPhone: string | null;
+  cancelReason: string | null;
   chargesAgreed: number | null;
   rating: number | null;
   created_at: string;
