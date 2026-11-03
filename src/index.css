@@ -8,7 +8,7 @@ body {
 .page {
   max-width: 480px;
   margin: 0 auto;
-  padding: 20px 20px 40px;
+  padding: 20px 20px 96px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -153,3 +153,53 @@ button.small { width: auto; padding: 8px 12px; font-size: 14px; }
   border-radius: 12px;
   margin: 0;
 }
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  background: #fff;
+  border-top: 1px solid #e2e2e2;
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  z-index: 50;
+}
+.bottom-nav a {
+  flex: 1;
+  text-align: center;
+  text-decoration: none;
+  color: #666;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 10px 4px;
+  border-radius: 10px;
+}
+.bottom-nav a.on {
+  color: #C74718;
+  background: #FDF3EC;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
