@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth } from "../lib/auth";
 import { signInWithGoogle } from "../lib/googleAuth";
 import { Navigate, useNavigate } from "react-router-dom";
+import { getLanguage, setLanguage, t, LANGUAGES, type Language } from "../lib/i18n";
 
 
 // Login = Google ONLY (user decision 2026-10-22, OTP-cost reason).
@@ -15,17 +16,23 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [lang, setLang] = useState<Language>(getLanguage());
 
 
   if (loading) {
     return (
       <div className="page">
-        <p className="muted">Load ho raha hai...</p>
+        <p className="muted">{t("loading")}</p>
       </div>
     );
   }
   if (user) return <Navigate to="/" replace />;
 
+
+  const chooseLanguage = (l: Language) => {
+    setLanguage(l);
+    setLang(l);
+  };
 
   const handleGoogle = async () => {
     setBusy(true);
@@ -38,7 +45,7 @@ export default function LoginPage() {
       navigate("/", { replace: true });
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "Google sign-in nahi ho paya.",
+        e instanceof Error ? e.message : t("login.googleFail"),
       );
     } finally {
       setBusy(false);
@@ -50,13 +57,21 @@ export default function LoginPage() {
     <div className="page">
       <img src="/favicon.png" alt="" style={{ width: 96, height: 96 }} />
       <h1>🔧 Mechanic Saathi</h1>
-      <p className="muted">
-        Driver ki Car SOS request paane ke liye Google se login karo.
-        Login par koi OTP nahi lagta — mobile number sirf ek baar profile
-        bharte waqt verify hoga.
-      </p>
+      <p className="muted">{t("login.desc")}</p>
+      <p className="muted">{t("login.langLabel")}</p>
+      <div className="chips">
+        {LANGUAGES.map((l) => (
+          <button
+            key={l.code}
+            className={lang === l.code ? "chip on" : "chip"}
+            onClick={() => chooseLanguage(l.code)}
+          >
+            {l.label}
+          </button>
+        ))}
+      </div>
       <button onClick={handleGoogle} disabled={busy}>
-        {busy ? "Google se connect ho raha hai..." : "Google se login karo"}
+        {busy ? t("login.googleBusy") : t("login.googleBtn")}
       </button>
       {error && <p className="error">{error}</p>}
     </div>
