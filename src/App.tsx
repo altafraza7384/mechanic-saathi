@@ -10,18 +10,20 @@ import PermissionsPage from "./pages/PermissionsPage";
 import HomePage from "./pages/HomePage";
 import RequestPage from "./pages/RequestPage";
 import JobsPage from "./pages/JobsPage";
+
 import type { ReactNode } from "react";
+import { t } from "./lib/i18n";
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="page"><p className="muted">Load ho raha hai...</p></div>;
+  if (loading) return <div className="page"><p className="muted">{t("loading")}</p></div>;
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
 function RequireProfile({ children }: { children: ReactNode }) {
   const { profile, loading } = useAuth();
-  if (loading) return <div className="page"><p className="muted">Load ho raha hai...</p></div>;
+  if (loading) return <div className="page"><p className="muted">{t("loading")}</p></div>;
   if (!profile) return <Navigate to="/profile" replace />;
   return <>{children}</>;
 }
