@@ -279,6 +279,23 @@ export default function HomePage() {
                 <Link key={r.id} to={`/request/${r.id}`} className="card">
                   <strong>{categoryLabel(r.category)}</strong>
                   <span>{r.areaText ?? t("areaMissing")}</span>
+                  {profile?.lat !== null &&
+                      profile?.lat !== undefined &&
+                    profile?.lng !== null &&
+                    profile?.lng !== undefined &&
+                    r.approxLat !== null &&
+                    r.approxLng !== null && (
+                      <span className="muted small">
+                        {t("distanceApprox", {
+                        n: distanceKm(
+                          profile.lat,
+                          profile.lng,
+                          r.approxLat,
+                          r.approxLng,
+                          ).toFixed(1),
+                      })}
+                      </span>
+                      )}
                   {r.description && (
                     <span className="muted">{r.description}</span>
                   )}
