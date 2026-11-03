@@ -187,6 +187,7 @@ export default function ProfilePage() {
       <p className="muted">
         {t("profile.desc")}
       </p>
+      <h2>{t("profile.secIdentity")}</h2>
       <label>{t("profile.name")}</label>
       <input value={name} onChange={(e) => setName(e.target.value)} />
       <label>{t("profile.shop")}</label>
@@ -248,6 +249,7 @@ export default function ProfilePage() {
         </>
       )}
       {verifyMsg && <p className="muted">{verifyMsg}</p>}
+      <h2>{t("profile.secServices")}</h2>
       <label>{t("profile.services")}</label>
       <div className="chips">
         {CATEGORIES.map((c) => (
@@ -265,7 +267,8 @@ export default function ProfilePage() {
         value={charges}
         onChange={(e) => setCharges(e.target.value)}
         placeholder={t("profile.optional")}
-      />
+            />
+            <h2>{t("profile.secCoverage")}</h2>
       <label>{t("profile.hours")}</label>
       <input
         value={hours}
