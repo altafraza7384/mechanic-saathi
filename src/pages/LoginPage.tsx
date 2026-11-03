@@ -74,6 +74,12 @@ export default function LoginPage() {
         {busy ? t("login.googleBusy") : t("login.googleBtn")}
       </button>
       {error && <p className="error">{error}</p>}
-    </div>
+      <p className="muted small">
+        <strong>{t("login.terms")}</strong>
+      </p>
+      <p className="muted small">
+        {t("login.termsNote")}
+      </p>
+      </div>
   );
 }
