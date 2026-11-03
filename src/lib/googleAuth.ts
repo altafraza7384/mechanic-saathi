@@ -6,6 +6,7 @@ import {
   signInWithRedirect,
 } from "firebase/auth";
 import { auth } from "./firebase";
+import { t } from "./i18n";
 
 /**
  * Google sign-in — the ONLY login method in Mechanic Saathi (user decision
@@ -57,15 +58,13 @@ async function signInWithGoogleNative(): Promise<"ok" | "cancelled"> {
     result = await FirebaseAuthentication.signInWithGoogle();
   } catch (e) {
     if (isCancelled(e)) return "cancelled";
-    throw new Error("Google sign-in nahi ho paya. Dobara try karo.");
+    throw new Error(t("google.fail"));
   }
   const idToken = result.credential?.idToken;
   if (!idToken) {
     // Almost always: SHA-1 not registered for this app in the Firebase
     // console, or google-services.json is stale (pre-fingerprint).
-    throw new Error(
-      "Google sign-in complete nahi hua. Firebase console me is app ka SHA-1 register karo aur google-services.json refresh karo, phir dobara try karo.",
-    );
+    throw new Error(t("google.noToken"));
   }
   const credential = GoogleAuthProvider.credential(
     idToken,
@@ -92,6 +91,6 @@ async function signInWithGoogleWeb(): Promise<"ok" | "cancelled"> {
       return "ok";
     }
     if (isCancelled(e)) return "cancelled";
-    throw new Error("Google sign-in nahi ho paya. Dobara try karo.");
+    throw new Error(t("google.fail"));
   }
 }
