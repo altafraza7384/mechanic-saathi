@@ -83,7 +83,7 @@ export default function JobsPage() {
             // driver phone/navigate actions (audit 2026-10-24).
             <Link key={j.id} to={`/request/${j.id}`} className="card">
               <strong>{categoryLabel(j.category)}</strong>
-              <span>{j.areaText ?? t("areaMissing")}</span>
+              <span>{j.areaText || (j.approxLat !== null && j.approxLng !== null ? t("areaGps") : t("areaMissing"))}</span>
               {profile?.lat !== null &&
                 profile?.lat !== undefined &&
                 profile?.lng !== null &&
