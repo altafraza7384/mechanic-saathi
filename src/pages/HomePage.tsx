@@ -21,6 +21,7 @@ import {
   stopOnlineService,
 } from "../lib/permissions";
 import { Link, useNavigate } from "react-router-dom";
+import { t } from "../lib/i18n";
 
 export default function HomePage() {
   const { user, profile, refreshProfile, logout } = useAuth();
@@ -187,12 +188,12 @@ export default function HomePage() {
   if (!profile) {
     return (
       <div className="page">
-        <h1>Profile adhoori hai</h1>
+        <h1>{t("home.noProfileTitle")}</h1>
         <p className="muted">
-          Pehle apni shop ki detail bharo, tabhi requests milengi.
+          {t("home.noProfileDesc")}
         </p>
         <button onClick={() => navigate("/profile")}>
-          Profile bharo
+          {t("home.fillProfile")}
         </button>
       </div>
     );
@@ -201,31 +202,30 @@ export default function HomePage() {
   return (
     <div className="page">
       <div className="row between">
-        <h1>Namaste, {profile.name} 👋</h1>
+        <h1>{t("home.greet", { n: profile.name })}</h1>
         <button className="ghost small" onClick={handleLogout}>
-          Logout
+          {t("home.logout")}
         </button>
       </div>
       {permBanner && !isHeld && (
         <div className="card warn">
-          <strong>⚠ Kuch permissions off hain</strong>
-          <span>Background me requests miss ho sakti hain.</span>
+          <strong>{t("home.permTitle")}</strong>
+          <span>{t("home.permDesc")}</span>
           <button className="ghost" onClick={() => navigate("/permissions")}>
-            Settings theek karein
+            {t("home.fixSettings")}
           </button>
         </div>
       )}
       {isHeld && (
         <div className="card hold-banner">
-          <strong>⛔ Account hold par hai</strong>
+          <strong>{t("home.holdTitle")}</strong>
           <span>
-            Admin ne tumhara account hold kar diya hai, isliye nayi
-            requests nahi milengi.
+            {t("home.holdDesc")}
           </span>
           {profile.held_reason && (
-            <span>Reason: {profile.held_reason}</span>
+            <span>{t("home.holdReason", { n: profile.held_reason })}</span>
           )}
-          <span className="muted small">Warnings: {warningCount}</span>
+          <span className="muted small">{t("home.warnings", { n: warningCount })}</span>
         </div>
       )}
       <div
@@ -236,50 +236,49 @@ export default function HomePage() {
       >
         <span className="dot" />
         {isHeld
-          ? "ACCOUNT HOLD — Nayi requests band hain"
+          ? t("home.holdStatus")
           : toggling
-            ? "Badal rahe hain..."
+            ? t("home.toggling")
             : profile.isOnline
-              ? "ONLINE — Requests mil rahi hain"
-              : "OFFLINE — Requests ke liye ONLINE karo"}
+              ? t("home.online")
+              : t("home.offline")}
       </div>
       {holdNotice && (
         <p className="error">
-          Account hold par hai — online tabhi ho sakoge jab admin hold
-          hatayega.
+          {t("home.holdNotice")}
         </p>
       )}
       {!isHeld && !profile.isOnline && (
         <p className="muted">
-          Offline ho to koi request nahi milegi. Kaam ke liye ONLINE karo.
+          {t("home.offlineHint")}
         </p>
       )}
       {isHeld ? (
         <p className="muted">
-          Hold hatne ke baad hi nayi requests yahan dikhengi.
+          {t("home.holdHint")}
         </p>
       ) : (
         <>
           {loadError && (
             <p className="error">
-              Requests load nahi ho paye, page refresh karke dobara try karo.
+              {t("home.loadError")}
             </p>
           )}
           <h2>
-            Nayi requests {profile.isOnline ? `(${visible.length})` : ""}
+            {profile.isOnline ? t("home.requestsCount", { n: visible.length }) : t("home.requestsTitle")}
           </h2>
           {!profile.isOnline ? (
-            <p className="muted">Online hone par yahan requests dikhengi.</p>
+            <p className="muted">{t("home.onlineEmpty")}</p>
           ) : visible.length === 0 ? (
             <p className="muted">
-              Abhi tumhari services/radius me koi pending request nahi hai.
+              {t("home.noRequests")}
             </p>
           ) : (
             <div className="list">
               {visible.map((r) => (
                 <Link key={r.id} to={`/request/${r.id}`} className="card">
                   <strong>{categoryLabel(r.category)}</strong>
-                  <span>{r.areaText ?? "Area nahi diya"}</span>
+                  <span>{r.areaText ?? t("areaMissing")}</span>
                   {r.description && (
                     <span className="muted">{r.description}</span>
                   )}
@@ -294,13 +293,13 @@ export default function HomePage() {
       )}
       <div className="row">
         <button className="ghost" onClick={() => navigate("/profile")}>
-          Profile edit karo
+          {t("home.editProfile")}
         </button>
         <button className="ghost" onClick={() => navigate("/jobs")}>
-          Meri jobs
+          {t("home.myJobs")}
         </button>
         <button className="ghost" onClick={() => navigate("/permissions")}>
-          Permissions
+          {t("home.permissions")}
         </button>
       </div>
     </div>
