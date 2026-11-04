@@ -68,7 +68,7 @@ export default function HomePage() {
 
   const visible = requests.filter((r) => {
     if (!profile) return false;
-        if !(servesCategory(profile.categories, r.category)) return false;
+            if (!servesCategory(profile.categories, r.category)) return false;
     if (
       profile.lat !== null &&
       profile.lng !== null &&
