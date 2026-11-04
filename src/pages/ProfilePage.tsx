@@ -58,177 +58,221 @@ export default function ProfilePage() {
   // Login stays Google-only and never sends an OTP.
   const [phone, setPhone] = useState(profile?.phone?.replace(/^\+91/, "") ?? "");
   const verifiedPhone = profile?.phoneVerified && profile.phone ? profile.phone : null;
-  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const isPhoneVerified =
+    verifiedPhone !== null && normalizePhone(phone) === verifiedPhone;
 
-  function toggleCat(cat: CarSosCategory) {
+  const toggleCat = (c: CarSosCategory) => {
     setCats((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat],
+      prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c],
     );
-  }
+  };
 
-  function normalizePhoneOrNull() {
-    if (!phone.trim()) return "";
-    const normalized = normalizePhone(phone);
-    if (!normalized) {
-      setPhoneError(
-        t("profile.invalidPhone") ??
-          "Enter a valid 10-digit mobile number (with or without +91).",
-      );
-      return null;
-    }
-    return normalized;
-  }
-
-  async function handleCaptureLocation() {
-    setLocating(true);
-    try {
-      const pos = await captureLocation();
-      setLoc(pos);
-      setError(null);
-    } catch {
-      setError(t("profile.locationFailed") ?? "Could not capture location.");
-    } finally {
-      setLocating(false);
-    }
-  }
-
-  async function save() {
-    if (!user) return;
+  const save = async () => {
     setError(null);
-    setPhoneError(null);
-    const normalizedPhone = normalizePhoneOrNull();
-    if (normalizedPhone === null) return;
+    const fullPhone = normalizePhone(phone);
+    if (!fullPhone) {
+      setError(t("profile.errPhone"));
+      return;
+    }
+    if (cats.length === 0) {
+      setError(t("profile.errCats"));
+      return;
+    }
+    if (!user) {
+      setError(t("profile.errLogin"));
+      return;
+    }
     setBusy(true);
     try {
+      let finalLoc = loc;
+      if (!finalLoc && profile?.lat != null && profile?.lng != null) {
+        finalLoc = { lat: profile.lat, lng: profile.lng };
+      }
       const custom = customServices
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
-      const data = {
-        uid: user.uid,
-        name: name.trim(),
-        shopName: shopName.trim(),
-        categories: cats,
-        customServices: custom,
-        charges: charges.trim(),
-        workingHours: hours.trim(),
-        serviceRadiusKm: radius,
-        phone: normalizedPhone || null,
-        phoneVerified: verifiedPhone === normalizedPhone,
-        ...(loc ? { lat: loc.lat, lng: loc.lng, geohash: encodeGeohash(loc.lat, loc.lng) } : {}),
-      };
-      await setDoc(doc(db, "mechanics", user.uid), data, { merge: true });
+      const isNew = !profile;
+      await setDoc(
+        doc(db, "mechanics", user.uid),
+        {
+          uid: user.uid,
+          name,
+          shopName,
+          categories: cats,
+          customServices: custom,
+          charges,
+          workingHours: hours,
+          serviceRadiusKm: radius,
+          isOnline: profile?.isOnline ?? true,
+          phone: fullPhone,
+          phoneVerified: isPhoneVerified,
+          ...(finalLoc
+            ? {
+                lat: finalLoc.lat,
+                lng: finalLoc.lng,
+                geohash: encodeGeohash(finalLoc.lat, finalLoc.lng),
+              }
+            : {}),
+          ...(isNew
+            ? { rating: 0, totalJobs: 0, created_at: new Date() }
+            : {}),
+          updated_at: new Date(),
+        },
+        { merge: true },
+      );
       await refreshProfile();
       navigate("/jobs");
     } catch {
-      setError(t("profile.saveFailed") ?? "Failed to save profile.");
+      setError(t("profile.errSave"));
     } finally {
       setBusy(false);
     }
-  }
+  };
 
   const pendingHint =
-    phone.trim() && verifiedPhone !== normalizePhone(phone)
-      ? t("profile.pendingHint") ?? "This number will show as pending until an admin verifies it."
+    phone.trim() && !isPhoneVerified && normalizePhone(phone) !== null
+      ? t("profile.pendingHint")
       : null;
 
+  const locationLabel =
+    loc != null
+      ? `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`
+      : profile?.lat != null && profile?.lng != null
+        ? `${profile.lat.toFixed(5)}, ${profile.lng.toFixed(5)}`
+        : null;
+
   return (
-    <main>
-      <h1>{t("profile.title") ?? "Mechanic profile"}</h1>
+    <div className="page">
+      <h1>{t("profile.title")}</h1>
+      <p className="muted">{t("profile.subtitle")}</p>
 
       <label>
-        {t("profile.name") ?? "Name"}
-        <input value={name} onChange={(e) => setName(e.target.value)} />
-      </label>
-
-      <label>
-        {t("profile.shopName") ?? "Shop name"}
-        <input value={shopName} onChange={(e) => setShopName(e.target.value)} />
-      </label>
-
-      <div>
-        <p>{t("profile.categories") ?? "Categories"}</p>
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat}
-            type="button"
-            onClick={() => toggleCat(cat)}
-            aria-pressed={cats.includes(cat)}
-            className={cats.includes(cat) ? "chip active" : "chip"}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-
-      <label>
-        {t("profile.customServices") ?? "Custom services"}
+        {t("profile.name")}
         <input
-          value={customServices}
-          onChange={(e) => setCustomServices(e.target.value)}
-          placeholder="e.g. brake repair, oil change"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={t("profile.namePh")}
         />
       </label>
 
       <label>
-        {t("profile.charges") ?? "Charges"}
-        <input value={charges} onChange={(e) => setCharges(e.target.value)} />
+        {t("profile.shop")}
+        <input
+          type="text"
+          value={shopName}
+          onChange={(e) => setShopName(e.target.value)}
+          placeholder={t("profile.shopPh")}
+        />
+      </label>
+
+      <div>
+        <p>{t("profile.services")}</p>
+        <div className="chips">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              className={cats.includes(c.id) ? "chip on" : "chip"}
+              onClick={() => toggleCat(c.id)}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <label>
+        {t("profile.custom")}
+        <input
+          type="text"
+          value={customServices}
+          onChange={(e) => setCustomServices(e.target.value)}
+          placeholder={t("profile.customPh")}
+        />
       </label>
 
       <label>
-        {t("profile.workingHours") ?? "Working hours"}
-        <input value={hours} onChange={(e) => setHours(e.target.value)} />
+        {t("profile.charges")}
+        <input
+          type="text"
+          value={charges}
+          onChange={(e) => setCharges(e.target.value)}
+          placeholder={t("profile.chargesPh")}
+        />
       </label>
 
       <label>
-        {t("profile.serviceRadiusKm") ?? "Service radius (km)"}
+        {t("profile.hours")}
+        <input
+          type="text"
+          value={hours}
+          onChange={(e) => setHours(e.target.value)}
+          placeholder={t("profile.hoursPh")}
+        />
+      </label>
+
+      <label>
+        {t("profile.radius")}
         <input
           type="number"
+          min={1}
+          max={50}
           value={radius}
           onChange={(e) => setRadius(Number(e.target.value))}
         />
       </label>
 
       <div>
-        <button type="button" onClick={handleCaptureLocation} disabled={locating}>
-          {locating
-            ? t("profile.locating") ?? "Locating..."
-            : t("profile.useMyLocation") ?? "Use my location"}
+        <button
+          type="button"
+          onClick={async () => {
+            setLocating(true);
+            try {
+              setLoc(await captureLocation());
+            } catch {
+              setError(t("profile.errLoc"));
+            } finally {
+              setLocating(false);
+            }
+          }}
+          disabled={locating}
+        >
+          {locating ? t("profile.locating") : t("profile.useLoc")}
         </button>
-        {loc && (
-          <p>
-            {t("profile.locationSet") ?? "Location set"}: {loc.lat.toFixed(5)},{" "}
-            {loc.lng.toFixed(5)}
-          </p>
-        )}
+        {locationLabel && <p className="muted">📍 {locationLabel}</p>}
       </div>
 
-      <div>
-        <label>
-          {t("profile.phone") ?? "Phone number"}
-          <input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            inputMode="tel"
-            placeholder="10-digit mobile number"
-          />
-        </label>
-        {verifiedPhone && phone.trim() && verifiedPhone === normalizePhone(phone) && (
-          <p>{t("profile.verified") ?? "Verified"}</p>
-        )}
-        {verifiedPhone && (
-          <p>
-            {t("profile.pending") ?? "Pending verification"}: {verifiedPhone}
-          </p>
-        )}
-        {pendingHint && <p>{pendingHint}</p>}
-        {phoneError && <p role="alert">{phoneError}</p>}
-      </div>
+      <label>
+        {t("profile.phone")}
+        <input
+          type="tel"
+          inputMode="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="10-digit mobile number"
+        />
+      </label>
+      {isPhoneVerified ? (
+        <p className="ok">
+          ✓ {t("profile.verified")}: {verifiedPhone}
+        </p>
+      ) : (
+        <>
+          {pendingHint && <p className="muted">{pendingHint}</p>}
+          {verifiedPhone && (
+            <p className="muted">
+              {t("profile.pending")}: {verifiedPhone}
+            </p>
+          )}
+        </>
+      )}
 
-      {error && <p role="alert">{error}</p>}
+      {error && <p className="err">{error}</p>}
       <button type="button" onClick={save} disabled={busy}>
-        {busy ? t("profile.saving") ?? "Saving..." : t("profile.save") ?? "Save profile"}
+        {busy ? t("profile.saving") : t("profile.save")}
       </button>
-    </main>
+    </div>
   );
 }
