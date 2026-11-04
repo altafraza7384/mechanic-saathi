@@ -9,7 +9,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../lib/auth";
-import { categoryLabel, type SosRequest } from "../lib/types";
+import { categoryLabel, servesCategory, type SosRequest } from "../lib/types";
 import { distanceKm } from "../lib/geohash";
 import {
   cancelRequestNotification,
@@ -68,7 +68,7 @@ export default function HomePage() {
 
   const visible = requests.filter((r) => {
     if (!profile) return false;
-    if (!profile.categories.includes(r.category)) return false;
+        if !(servesCategory(profile.categories, r.category)) return false;
     if (
       profile.lat !== null &&
       profile.lng !== null &&
