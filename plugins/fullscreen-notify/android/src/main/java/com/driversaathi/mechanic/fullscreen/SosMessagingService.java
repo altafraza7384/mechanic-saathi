@@ -90,15 +90,24 @@ public class SosMessagingService extends FirebaseMessagingService {
         nm.createNotificationChannel(ch);
     }
 
-    private static String categoryLabel(String category) {
-        if ("tyre".equals(category)) {
-            return "Tyre Help";
-        }
-        if ("mechanic".equals(category)) {
-            return "Car Mechanic";
+        private static String categoryLabel(String category) {
+        if ("car".equals(category) || "mechanic".equals(category)) {
+            return "Car Problem";
         }
         if ("battery".equals(category)) {
             return "Battery Problem";
+        }
+        if ("towing".equals(category)) {
+            return "Towing";
+        }
+        if ("other".equals(category)) {
+            return "Other";
+        }
+        if ("custom".equals(category)) {
+            return "Custom";
+        }
+        if ("tyre".equals(category)) {
+            return "Tyre Help";
         }
         return "Other Help";
     }
