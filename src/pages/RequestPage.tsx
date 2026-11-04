@@ -20,7 +20,7 @@ export default function RequestPage() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [req, setReq] = useState<SosRequest | null>(null);
-  const [details, setDetails] = useState<SosRequestDetails | null>(null);
+    const [details, setDetails] = useState<(SosRequestDetails & { driverName: string | undefined }) | null>(null);
   const [detailsError, setDetailsError] = useState(false);
   const [detailsRetry, setDetailsRetry] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -226,7 +226,8 @@ export default function RequestPage() {
                 <a href={`tel:${details.driverPhone}`}>
                   {details.driverPhone}
                 </a>
-              </p>
+                {details.driverName && <> - {details.driverName}<>}
+                </></></p>
               {mapsUrl && (
                 <a href={mapsUrl} target="_blank" rel="noreferrer">
                   <button className="ghost">{t("req.navigate")}</button>
