@@ -1,11 +1,27 @@
-export type CarSosCategory = "tyre" | "mechanic" | "battery" | "other";
+export type CarSosCategory = "car" | "battery" | "towing" | "other" | "custom";
 
-export const CATEGORIES: { id: CarSosCategory; label: string }[] = [
-  { id: "tyre", label: "Tyre Help" },
-  { id: "mechanic", label: "Car Mechanic" },
+export const CATEGORIES: {
+  id: CarSosCategory;
+  label: string;
+}[] = [
+  { id: "car", label: "Car Problem" },
   { id: "battery", label: "Battery Problem" },
+  { id: "towing", label: "Towing" },
   { id: "other", label: "Other" },
+  { id: "custom", label: "Custom" },
 ];
+
+export function normalizeCategory(c: string): CarSosCategory | null {
+  if (c === "mechanic") return "car";
+  if (c === "tyre") return null;
+  return c as CarSosCategory;
+}
+
+export function servesCategory(cats: string[], reqCat: string): boolean {
+  const n = normalizeCategory(reqCat);
+  if (!n) return false;
+  return cats.map(normalizeCategory).includes(n);
+}
 
 export interface MechanicProfile {
   id: string;
@@ -18,6 +34,7 @@ export interface MechanicProfile {
   phoneVerified?: boolean;
   phoneVerifiedAt?: string | null;
   categories: CarSosCategory[];
+  customServices?: string[];
   charges: string | null;
   workingHours: string | null;
   lat: number | null;
@@ -66,6 +83,10 @@ export interface SosRequestDetails {
   mechanicId: string | null;
 }
 
-export function categoryLabel(c: CarSosCategory): string {
-  return CATEGORIES.find((x) => x.id === c)?.label ?? c;
+export function categoryLabel(c: string): string {
+  const label = CATEGORIES.find((x) => x.id === c)?.label;
+  if (label) return label;
+  if (c === "mechanic") return "Car Problem";
+  if (c === "tyre") return "Tyre Help";
+  return c;
 }
