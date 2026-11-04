@@ -77,6 +77,7 @@ export interface SosRequestDetails {
   id: string;
   requestId: string;
   driverId: string;
+  driverName?: string | null;
   driverPhone: string;
   exactLat: number | null;
   exactLng: number | null;
