@@ -226,7 +226,7 @@ export default function RequestPage() {
                 <a href={`tel:${details.driverPhone}`}>
                   {details.driverPhone}
                 </a>
-                {details.driverName && <> - {details.driverName}<>}
+                {details.driverName && <> - {details.driverName}</>}
                 </></></p>
               {mapsUrl && (
                 <a href={mapsUrl} target="_blank" rel="noreferrer">
