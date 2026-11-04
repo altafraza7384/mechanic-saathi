@@ -19,8 +19,8 @@ export default function RequestPage() {
   const { id } = useParams();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
-  const [req, setReq] = useState<SosRequest | null>(null);
-    const [details, setDetails] = useState<(SosRequestDetails & { driverName: string | undefined }) | null>(null);
+    const [details, setDetails] = useState<SosRequestDetails | null>(null);
+
   const [detailsError, setDetailsError] = useState(false);
   const [detailsRetry, setDetailsRetry] = useState(0);
   const [busy, setBusy] = useState(false);
