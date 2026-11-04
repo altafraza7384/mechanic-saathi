@@ -227,7 +227,7 @@ export default function RequestPage() {
                   {details.driverPhone}
                 </a>
                 {details.driverName && <> - {details.driverName}</>}
-                </></></p>
+                </p>
               {mapsUrl && (
                 <a href={mapsUrl} target="_blank" rel="noreferrer">
                   <button className="ghost">{t("req.navigate")}</button>
