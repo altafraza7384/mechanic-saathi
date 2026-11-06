@@ -1,0 +1,1 @@
+{"routes":[{"path":"/login","title":"Login"},{"path":"/","title":"Requests"},{"path":"/request/:id","title":"Request detail"},{"path":"/jobs","title":"Meri jobs"},{"path":"/profile","title":"Profile"},{"path":"/permissions","title":"Alert setup"}]}
