@@ -101,11 +101,6 @@ export default function ProfilePage() {
           name,
           shopName,
           phone: isPhoneVerified && verifiedPhone ? verifiedPhone : fullPhone,
-          phoneVerified: isPhoneVerified && verifiedPhone ? true : false,
-          phoneVerifiedAt:
-            isPhoneVerified && verifiedPhone
-              ? profile?.phoneVerifiedAt ?? new Date().toISOString()
-              : null,
           categories: cats,
           customServices: customServices
             .split(",")
