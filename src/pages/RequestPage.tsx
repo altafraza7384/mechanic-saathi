@@ -176,15 +176,14 @@ export default function RequestPage() {
       <button className="ghost small" onClick={() => navigate("/")}>
         {t("back")}
       </button>
-      <h1>{categoryLabel(req.category)}</h1>
-      <p className="muted">
-        {t("req.status", { n: statusLabel(req.status) })}
-      </p>
-      {req.description && <p>{req.description}</p>}
-      <p>📍 {req.areaText ?? t("areaMissing")}</p>
-      <p className="muted small">
-        {new Date(req.created_at).toLocaleString("en-IN")}
-      </p>
+      <div className="card" style={{ gap: 10 }}>
+        <span className="small" style={{ color: "#C74718", fontWeight: 700 }}>REQUEST DETAIL</span>
+        <h1>{categoryLabel(req.category)}</h1>
+        <p className="muted">{t("req.status", { n: statusLabel(req.status) })}</p>
+        {req.description && <p>{req.description}</p>}
+        <p>📍 {req.areaText ?? t("areaMissing")}</p>
+        <p className="muted small">{new Date(req.created_at).toLocaleString("en-IN")}</p>
+      </div>
 
       {req.status === "pending" && (
         <>
@@ -217,8 +216,9 @@ export default function RequestPage() {
       )}
 
       {mine && (req.status === "accepted" || req.status === "onway" || req.status === "arrived") && (
-        <div className="card">
-          <h2>{t("req.driverDetail")}</h2>
+          <div className="card">
+            <h2>{t("req.driverDetail")}</h2>
+            <p className="muted small">Phone aur exact pin ab unlock ho gaye hain.</p>
           {details ? (
             <>
               <p>

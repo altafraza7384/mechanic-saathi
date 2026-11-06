@@ -322,11 +322,14 @@ export default function HomePage() {
                       })}
                       </span>
                       )}
-                  {r.description && (
+              {r.description && (
                     <span className="muted">{r.description}</span>
                   )}
                   <span className="muted small">
                     {new Date(r.created_at).toLocaleString("en-IN")}
+                      </span>
+                  <span className="small" style={{ color: "#C74718", fontWeight: 700 }}>
+                    Request dekhein →
                   </span>
                 </Link>
               ))}

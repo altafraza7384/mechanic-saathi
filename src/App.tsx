@@ -65,10 +65,10 @@ function BottomNav() {
     if (!user) return null;  
   if (!loading && !profile && location.pathname === "/profile") return null;
     const items = [
-      { to: "/", label: t("nav.requests") },
-      { to: "/jobs", label: t("nav.jobs") },
-      { to: "/profile", label: t("nav.profile") },
-      { to: "/permissions", label: t("nav.alerts") },
+      { to: "/", icon: "⌂", label: t("nav.requests") },
+      { to: "/jobs", icon: "▣", label: t("nav.jobs") },
+      { to: "/profile", icon: "◎", label: t("nav.profile") },
+      { to: "/permissions", icon: "◉", label: t("nav.alerts") },
         ];
     return (
           <nav className="bottom-nav">
@@ -78,7 +78,7 @@ function BottomNav() {
                                 to={item.to}
                                 className={location.pathname === item.to || (item.to === "/" && location.pathname.startsWith("/request/")) ? "on" : ""}
                               >
-                      {item.label}
+                      <span aria-hidden="true">{item.icon}</span><br />{item.label}
                     </Link>
                   ))}
           </nav>
