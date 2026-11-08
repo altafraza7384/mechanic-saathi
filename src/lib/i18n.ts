@@ -199,7 +199,7 @@ const dict: Record<Language, Record<string, string>> = {
     "ui.km": "km door",
     "ui.travelTime": "Indicative travel time",
     "ui.vehicle": "Vehicle",
-    "ui.car": "Car",    
+    "ui.car": "Car",
     "ui.driverProblem": "Driver ki problem",
     "ui.serviceInfo": "Service ki jankari",
     "ui.visitingCharge": "Aapka visiting charge: {n}",
