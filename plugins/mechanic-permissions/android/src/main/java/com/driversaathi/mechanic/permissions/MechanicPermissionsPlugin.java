@@ -123,26 +123,26 @@ public class MechanicPermissionsPlugin extends Plugin {
     }
 
     @PluginMethod
-        public void openBatterySettings(PluginCall call) {
-            // The request dialog dead-ends on Vivo/OriginOS: its "Set now" opens
-            // the vendor's own battery page instead of granting the exemption,
-            // so the row could never turn green. Open the system optimization
-            // list directly so the user can set "Don't optimize" for this app.
-            Intent intent = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    public void openBatterySettings(PluginCall call) {
+        // The request dialog dead-ends on Vivo/OriginOS: its "Set now" opens
+        // the vendor's own battery page instead of granting the exemption,
+        // so the row could never turn green. Open the system optimization
+        // list directly so the user can set "Don't optimize" for this app.
+        Intent intent = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            getContext().startActivity(intent);
+        } catch (Exception e) {
+            // List activity missing on this ROM — fall back to app details.
             try {
-                getContext().startActivity(intent);
-            } catch (Exception e) {
-                // List activity missing on this ROM — fall back to app details.
-                try {
-                    getContext().startActivity(appDetailsIntent());
-                } catch (Exception ignored) {
-                    call.reject("Could not open battery settings");
-                    return;
-                }
+                getContext().startActivity(appDetailsIntent());
+            } catch (Exception ignored) {
+                call.reject("Could not open battery settings");
+                return;
             }
-            call.resolve();
         }
+        call.resolve();
+    }
 
     @PluginMethod
     public void openAutostartSettings(PluginCall call) {
