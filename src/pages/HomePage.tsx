@@ -13,7 +13,7 @@ function initials(name: string) { return name.split(" ").map((x) => x[0]).join("
 function serviceIcon(category: string) { return category === "battery" ? "▣" : category === "towing" ? "▱" : category === "other" ? "+" : "◉"; }
 
 export default function HomePage() {
-  const { user, profile, refreshProfile } = useAuth(); const navigate = useNavigate();
+  const { user, profile, refreshProfile, logout } = useAuth(); const navigate = useNavigate();
   const [requests, setRequests] = useState<SosRequest[]>([]); const [loadError, setLoadError] = useState(false); const [holdNotice, setHoldNotice] = useState(false); const [permBanner, setPermBanner] = useState(false);
   const forcedOfflineRef = useRef(false); const seenRef = useRef<Set<string>>(new Set()); const notifiedRef = useRef<Set<string>>(new Set()); const firstOnlineSnapshotRef = useRef(false);
   const isHeld = profile?.status === "held"; const warningCount = profile?.warnings ?? 0;
@@ -25,23 +25,23 @@ export default function HomePage() {
   useEffect(() => { if (!isNative) return; const check = () => getPermissionRows().then((rows) => setPermBanner(rows.some((r) => r.state === "missing"))).catch(() => {}); check(); window.addEventListener("focus", check); return () => window.removeEventListener("focus", check); }, [isNative]);
   useEffect(() => { if (profile?.status !== "held") { forcedOfflineRef.current = false; return; } if (!user || !profile.isOnline || forcedOfflineRef.current) return; forcedOfflineRef.current = true; updateDoc(doc(db, "mechanics", user.uid), { isOnline: false }).then(refreshProfile).catch(() => { forcedOfflineRef.current = false; }); }, [user, profile, refreshProfile]);
   const toggleOnline = async () => { if (!user || !profile) return; if (isHeld) { setHoldNotice(true); return; } await updateDoc(doc(db, "mechanics", user.uid), { isOnline: !profile.isOnline }); await refreshProfile(); };
-  if (!profile) return <div className="page"><div className="brand-kicker">Mechanic Saathi</div><h1>Apna garage ready karein.</h1><p className="muted">Pehle apni service details bharein, tabhi nearby requests milengi.</p><button onClick={() => navigate("/profile")}>Profile setup karein →</button></div>;
+  if (!profile) return <div className="page"><div className="brand-kicker">{t("ui.brand")}</div><h1>{t("ui.garageReady")}</h1><p className="muted">{t("ui.setupDesc")}</p><button onClick={() => navigate("/profile")}>{t("ui.profileSetup")}</button></div>;
   return <div className="page">
-    <div className="between"><div><div className="brand-kicker" style={{fontSize:11}}>Mechanic Saathi</div><p className="muted">Namaste, {profile.name}</p></div><div className="profile-initial">{initials(profile.name)}</div></div>
+    <div className="between"><div><div className="brand-kicker" style={{fontSize:11}}>{t("ui.brand")}</div><p className="muted">{t("ui.namaste", { n: profile.name })}</p></div><div className="profile-initial">{initials(profile.name)}</div></div>
     <div className="hero">
-      <div className="availability" onClick={toggleOnline}><span>● {isHeld ? "ACCOUNT HOLD" : profile.isOnline ? "ONLINE" : "OFFLINE"}</span><span className={`toggle ${profile.isOnline && !isHeld ? "" : "off"}`}><i /></span></div>
-      <h2>{isHeld ? "Account review mein hai." : profile.isOnline ? "Kaam ke liye taiyaar." : "Jab ready ho, online aayein."}</h2><p>{isHeld ? "Nayi requests abhi band hain." : profile.isOnline ? "Aapke area ki nayi requests yahan aayengi." : "Online hote hi nearby drivers ki requests milengi."}</p>
-      <div className="hero-meta"><span>⌖ {profile.serviceRadiusKm} km area</span><span>◷ {profile.workingHours || "Hours set nahi"}</span></div>
+      <div className="availability" onClick={toggleOnline}><span>● {isHeld ? t("ui.accountHold") : profile.isOnline ? t("ui.online") : t("ui.offline")}</span><span className={`toggle ${profile.isOnline && !isHeld ? "" : "off"}`}><i /></span></div>
+      <h2>{isHeld ? t("ui.holdReview") : profile.isOnline ? t("ui.onlineReady") : t("ui.offlineReady")}</h2><p>{isHeld ? t("ui.holdDesc") : profile.isOnline ? t("ui.onlineDesc") : t("ui.offlineDesc")}</p>
+      <div className="hero-meta"><span>⌖ {t("ui.area", { n: profile.serviceRadiusKm })}</span><span>◷ {profile.workingHours || t("ui.hoursUnset")}</span></div>
     </div>
-    {permBanner && !isHeld && <div className="notice"><span>♧</span><div><strong>Background alerts setup baaki hai</strong><a onClick={() => navigate("/permissions")}>Setup poora karein →</a></div></div>}
-    {isHeld && <div className="notice"><span>!</span><div><strong>Account hold par hai</strong><p>{profile.held_reason || "Admin review ke baad yahan status update hoga."} · Warnings: {warningCount}</p></div></div>}
+    {permBanner && !isHeld && <div className="notice"><span>♧</span><div><strong>{t("ui.alertSetup")}</strong><a onClick={() => navigate("/permissions")}>{t("ui.setupNow")}</a></div></div>}
+    {isHeld && <div className="notice"><span>!</span><div><strong>{t("ui.holdBanner")}</strong><p>{profile.held_reason || t("ui.adminReview")} · {t("ui.warnings", { n: warningCount })}</p></div></div>}
     {holdNotice && <p className="error">Account hold par hai — admin hold hatayega tab online ho sakoge.</p>}
-    <div className="section-head"><h2>Nayi requests <span style={{color:"var(--orange)"}}>{visible.length || ""}</span></h2><span>Nearby</span></div>
-    {loadError && <p className="error">Requests load nahi ho payi. Dobara try karein.</p>}
-    {!profile.isOnline ? <div className="card pad"><p className="muted">Online hone par yahan requests dikhengi.</p></div> : visible.length === 0 ? <div className="card pad"><p className="muted">Abhi aapke area mein koi pending request nahi hai.</p></div> : <div className="stack">{visible.map((r) => <Link key={r.id} to={`/request/${r.id}`} className="card request-card">
-      <div className="request-card-head"><span className="service-icon">{serviceIcon(r.category)}</span><div><strong>{categoryLabel(r.category)}</strong><p className="muted">Abhi aaya · #{r.id.slice(0,6).toUpperCase()}</p></div><span className="badge">Naya</span></div>
-      <div className="request-location"><i>⌖</i><span>{r.areaText || t("areaGps")}</span></div><p className="request-meta">{profile.lat != null && r.approxLat != null ? `${distanceKm(profile.lat, profile.lng!, r.approxLat, r.approxLng!).toFixed(1)} km door · approx. 6 min` : "Location available"}</p>
-      {r.description && <p className="request-copy">“{r.description}”</p>}<span className="primary-card-btn" style={{display:"block",padding:"14px",borderRadius:12,textAlign:"center",background:"var(--orange)",color:"white",fontWeight:800,fontSize:13}}>Request dekhein →</span>
-    </Link>)}</div>}
+    <div className="section-head"><h2>{t("ui.newRequests")} <span style={{color:"var(--orange)"}}>{visible.length || ""}</span></h2><span>{t("ui.nearby")}</span></div>
+    {loadError && <p className="error">{t("ui.loadRequests")}</p>}
+    {!profile.isOnline ? <div className="card pad"><p className="muted">{t("ui.onlineEmpty")}</p></div> : visible.length === 0 ? <div className="card pad"><p className="muted">{t("ui.noPending")}</p></div> : <div className="stack">{visible.map((r) => <Link key={r.id} to={`/request/${r.id}`} className="card request-card">
+      <div className="request-card-head"><span className="service-icon">{serviceIcon(r.category)}</span><div><strong>{categoryLabel(r.category)}</strong><p className="muted">{t("ui.justArrived", { n: r.id.slice(0,6).toUpperCase() })}</p></div><span className="badge">{t("ui.new")}</span></div>
+      <div className="request-location"><i>⌖</i><span>{r.areaText || t("areaGps")}</span></div><p className="request-meta">{profile.lat != null && r.approxLat != null ? t("ui.kmAway", { n: distanceKm(profile.lat, profile.lng!, r.approxLat, r.approxLng!).toFixed(1) }) : ""}</p>
+      {r.description && <p className="request-copy">“{r.description}”</p>}<span className="primary-card-btn" style={{display:"block",padding:"14px",borderRadius:12,textAlign:"center",background:"var(--orange)",color:"white",fontWeight:800,fontSize:13}}>{t("ui.requestView")}</span>
+    </Link>)}</div>}<button className="ghost small" onClick={() => void logout()}>{t("home.logout")}</button>
   </div>;
 }
