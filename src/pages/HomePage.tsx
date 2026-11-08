@@ -35,7 +35,7 @@ export default function HomePage() {
     </div>
     {permBanner && !isHeld && <div className="notice"><span>♧</span><div><strong>{t("ui.alertSetup")}</strong><a onClick={() => navigate("/permissions")}>{t("ui.setupNow")}</a></div></div>}
     {isHeld && <div className="notice"><span>!</span><div><strong>{t("ui.holdBanner")}</strong><p>{profile.held_reason || t("ui.adminReview")} · {t("ui.warnings", { n: warningCount })}</p></div></div>}
-    {holdNotice && <p className="error">Account hold par hai — admin hold hatayega tab online ho sakoge.</p>}
+    {holdNotice && <p className="error">{t("ui.holdNotice")}</p>}
     <div className="section-head"><h2>{t("ui.newRequests")} <span style={{color:"var(--orange)"}}>{visible.length || ""}</span></h2><span>{t("ui.nearby")}</span></div>
     {loadError && <p className="error">{t("ui.loadRequests")}</p>}
     {!profile.isOnline ? <div className="card pad"><p className="muted">{t("ui.onlineEmpty")}</p></div> : visible.length === 0 ? <div className="card pad"><p className="muted">{t("ui.noPending")}</p></div> : <div className="stack">{visible.map((r) => <Link key={r.id} to={`/request/${r.id}`} className="card request-card">
