@@ -297,7 +297,7 @@ const dict: Record<Language, Record<string, string>> = {
     "ui.someOff": "Kuch settings abhi off hain",
     "ui.backgroundMiss": "Background mein requests miss ho sakti hain.",
     "ui.proceedAnyway": "Phir bhi aage badhein",
-"ui.fixFirst": "Pehle fix karein",
+    "ui.fixFirst": "Pehle fix karein",
     "ui.tabActive": "Active",
     "ui.tabHistory": "History",
     "ui.notFoundTitle": "Request nahi mili",
