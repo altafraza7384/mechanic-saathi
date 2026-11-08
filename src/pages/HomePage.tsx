@@ -13,7 +13,7 @@ function initials(name: string) { return name.split(" ").map((x) => x[0]).join("
 function serviceIcon(category: string) { return category === "battery" ? "▣" : category === "towing" ? "▱" : category === "other" ? "+" : "◉"; }
 
 export default function HomePage() {
-  const { user, profile, refreshProfile, logout } = useAuth(); const navigate = useNavigate();
+  const { user, profile, refreshProfile } = useAuth(); const navigate = useNavigate();
   const [requests, setRequests] = useState<SosRequest[]>([]); const [loadError, setLoadError] = useState(false); const [holdNotice, setHoldNotice] = useState(false); const [permBanner, setPermBanner] = useState(false);
   const forcedOfflineRef = useRef(false); const seenRef = useRef<Set<string>>(new Set()); const notifiedRef = useRef<Set<string>>(new Set()); const firstOnlineSnapshotRef = useRef(false);
   const isHeld = profile?.status === "held"; const warningCount = profile?.warnings ?? 0;
@@ -42,6 +42,6 @@ export default function HomePage() {
       <div className="request-card-head"><span className="service-icon">{serviceIcon(r.category)}</span><div><strong>{categoryLabel(r.category)}</strong><p className="muted">{t("ui.justArrived", { n: r.id.slice(0,6).toUpperCase() })}</p></div><span className="badge">{t("ui.new")}</span></div>
       <div className="request-location"><i>⌖</i><span>{r.areaText || t("areaGps")}</span></div><p className="request-meta">{profile.lat != null && r.approxLat != null ? t("ui.kmAway", { n: distanceKm(profile.lat, profile.lng!, r.approxLat, r.approxLng!).toFixed(1) }) : ""}</p>
       {r.description && <p className="request-copy">“{r.description}”</p>}<span className="primary-card-btn" style={{display:"block",padding:"14px",borderRadius:12,textAlign:"center",background:"var(--orange)",color:"white",fontWeight:800,fontSize:13}}>{t("ui.requestView")}</span>
-    </Link>)}</div>}<button className="ghost small" onClick={() => void logout()}>{t("home.logout")}</button>
+    </Link>)}</div>}
   </div>;
 }
