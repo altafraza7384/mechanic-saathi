@@ -1,353 +1,47 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  collection,
-  onSnapshot,
-  query,
-  where,
-  doc,
-  updateDoc,
-} from "firebase/firestore";
+import { collection, onSnapshot, query, where, doc, updateDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../lib/auth";
 import { categoryLabel, servesCategory, type SosRequest } from "../lib/types";
 import { distanceKm } from "../lib/geohash";
-import {
-  cancelRequestNotification,
-  ensureSosChannel,
-  getPermissionRows,
-  isNative,
-  notifyNewRequest,
-  startOnlineService,
-  stopOnlineService,
-} from "../lib/permissions";
+import { cancelRequestNotification, ensureSosChannel, getPermissionRows, isNative, notifyNewRequest, startOnlineService, stopOnlineService } from "../lib/permissions";
 import { cancelFullscreenNotification, readLaunchAction, registerFcmToken } from "../lib/fullscreenNotify";
-
 import { Link, useNavigate } from "react-router-dom";
 import { t } from "../lib/i18n";
 
+function initials(name: string) { return name.split(" ").map((x) => x[0]).join("").slice(0, 2).toUpperCase(); }
+function serviceIcon(category: string) { return category === "battery" ? "▣" : category === "towing" ? "▱" : category === "other" ? "+" : "◉"; }
+
 export default function HomePage() {
-  const { user, profile, refreshProfile, logout } = useAuth();
-  const navigate = useNavigate();
-  const [requests, setRequests] = useState<SosRequest[]>([]);
-  const [loadError, setLoadError] = useState(false);
-  const [toggling, setToggling] = useState(false);
-  const [holdNotice, setHoldNotice] = useState(false);
-  const [permBanner, setPermBanner] = useState(false);
-  const forcedOfflineRef = useRef(false);
-  // Notification bookkeeping. seenRef = every request id ever shown (so the
-  // first snapshot — the existing backlog — never pings); notifiedRef =
-  // ids with a live notification, cancelled when the request leaves pending.
-  const seenRef = useRef<Set<string>>(new Set());
-  const notifiedRef = useRef<Set<string>>(new Set());
-  const firstOnlineSnapshotRef = useRef(false);
-  // Old docs have no status field — treat missing status as "active".
-  const isHeld = profile?.status === "held";
-  const warningCount = profile?.warnings ?? 0;
-
-  // Live listener: every pending SOS request, filtered client-side by
-  // the mechanic's own categories + service radius.
-  useEffect(() => {
-    const q = query(
-      collection(db, "sos_requests"),
-      where("status", "==", "pending"),
-    );
-    const unsub = onSnapshot(q, (snap) => {
-      setLoadError(false);
-      const rows = snap.docs.map(
-        (d) => ({ id: d.id, ...d.data() }) as SosRequest,
-      );
-      rows.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
-      setRequests(rows);
-    }, () => {
-      // A failed listener used to leave a silent empty list (audit
-      // 2026-10-24): show the failure instead of "koi request nahi".
-      setLoadError(true);
-    });
-    return unsub;
-  }, []);
-
-  const visible = requests.filter((r) => {
-    if (!profile) return false;
-            if (!servesCategory(profile.categories, r.category)) return false;
-    if (
-      profile.lat !== null &&
-      profile.lng !== null &&
-      r.approxLat !== null &&
-      r.approxLng !== null
-    ) {
-      const d = distanceKm(profile.lat, profile.lng, r.approxLat, r.approxLng);
-      if (d > profile.serviceRadiusKm) return false;
-    }
-    return true;
-  });
-
-  // Foreground service follows the ONLINE flag: it keeps the process alive
-  // so the listener above keeps running while the app is backgrounded.
-  // Held mechanics never get the service (their force-offline flips
-  // isOnline, which stops it here too).
-  useEffect(() => {
-    if (!profile) return;
-    if (profile.isOnline && profile.status !== "held") {
-      ensureSosChannel();
-      startOnlineService();
-      if (user) void registerFcmToken(user.uid);
-    } else {
-      stopOnlineService();
-    }
-  }, [user, profile?.isOnline, profile?.status]);
-
-  // New-request notifications. Only arrivals AFTER the first online snapshot
-  // ping — the backlog on first open just shows in the list. While offline
-  // (or held) nothing is marked seen, and outstanding pings are cancelled.
-  // Caveat: this listener lives in HomePage, so it only covers the app
-  // while Home is mounted (backgrounded app included — the tree stays
-  // mounted). A mechanic browsing Jobs/Profile gets no ping until they
-  // return to Home; moving this watcher to the App shell is a follow-up.
-  useEffect(() => {
-    if (!profile?.isOnline || profile?.status === "held") {
-      notifiedRef.current.forEach((id) => {
-        cancelRequestNotification(id);
-        void cancelFullscreenNotification(id);
-      });
-      notifiedRef.current.clear();
-      return;
-    }
-    if (!firstOnlineSnapshotRef.current) {
-      visible.forEach((r) => seenRef.current.add(r.id));
-      firstOnlineSnapshotRef.current = true;
-      return;
-    }
-    visible.forEach((r) => {
-      if (!seenRef.current.has(r.id)) {
-        seenRef.current.add(r.id);
-        notifiedRef.current.add(r.id);
-        notifyNewRequest(r);
-      }
-    });
-    notifiedRef.current.forEach((id) => {
-      if (!visible.some((r) => r.id === id)) {
-        notifiedRef.current.delete(id);
-        cancelRequestNotification(id);
-        void cancelFullscreenNotification(id);
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, profile?.isOnline, profile?.status]);
-
-  // Full-screen popup Accept: the native side stored a read-once action;
-  // open the request page so the mechanic taps Accept there (the accept
-  // transaction still guards against double-claim). Checked on mount and
-  // whenever the app regains focus, so it also fires when the app was
-  // already open on another page.
-  useEffect(() => {
-    let cancelled = false;
-    const check = async () => {
-      const launch = await readLaunchAction();
-      if (!cancelled && launch?.action === "accept") {
-        navigate(`/request/${launch.requestId}`);
-      }
-    };
-    void check();
-    window.addEventListener("focus", check);
-    return () => {
-      cancelled = true;
-      window.removeEventListener("focus", check);
-    };
-  }, [navigate]);
-
-  // Permission banner: re-checked on mount and whenever the mechanic
-  // returns to Home (e.g. from the Permissions screen).
-  useEffect(() => {
-    if (!isNative) return;
-    const check = () => {
-      getPermissionRows()
-        .then((rows) => setPermBanner(rows.some((r) => r.state === "missing")))
-        .catch(() => {});
-    };
-    check();
-    window.addEventListener("focus", check);
-    return () => window.removeEventListener("focus", check);
-  }, []);
-  // Held mechanic: force offline once so no new requests reach them.
-  // The ref guard makes this fire only while held && online — after the
-  // write + refresh, isOnline is false and the effect becomes a no-op,
-  // so there is no loop. The ref resets if the hold is later lifted,
-  // so a re-hold forces offline again.
-  useEffect(() => {
-    if (profile?.status !== "held") {
-      forcedOfflineRef.current = false;
-      return;
-    }
-    if (!user || !profile.isOnline || forcedOfflineRef.current) return;
-    forcedOfflineRef.current = true;
-    updateDoc(doc(db, "mechanics", user.uid), { isOnline: false })
-      .then(() => refreshProfile())
-      .catch(() => {
-        forcedOfflineRef.current = false;
-      });
-  }, [user, profile, refreshProfile]);
-
-  const toggleOnline = async () => {
-    if (!user || !profile) return;
-    // Held mechanics cannot toggle: show the held message instead.
-    if (isHeld) {
-      setHoldNotice(true);
-      return;
-    }
-    setToggling(true);
-    try {
-      await updateDoc(doc(db, "mechanics", user.uid), {
-        isOnline: !profile.isOnline,
-      });
-      await refreshProfile();
-    } finally {
-      setToggling(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    // Never leave the ONLINE service running after logout.
-    await stopOnlineService();
-    logout();
-  };
-
-  if (!profile) {
-    return (
-      <div className="page">
-        <h1>{t("home.noProfileTitle")}</h1>
-        <p className="muted">
-          {t("home.noProfileDesc")}
-        </p>
-        <button onClick={() => navigate("/profile")}>
-          {t("home.fillProfile")}
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="page">
-      <div className="row between">
-        <h1>{t("home.greet", { n: profile.name })}</h1>
-        <button className="ghost small" onClick={handleLogout}>
-          {t("home.logout")}
-        </button>
-      </div>
-      {permBanner && !isHeld && (
-        <div className="card warn">
-          <strong>{t("home.permTitle")}</strong>
-          <span>{t("home.permDesc")}</span>
-          <button className="ghost" onClick={() => navigate("/permissions")}>
-            {t("home.fixSettings")}
-          </button>
-        </div>
-      )}
-      {isHeld && (
-        <div className="card hold-banner">
-          <strong>{t("home.holdTitle")}</strong>
-          <span>
-            {t("home.holdDesc")}
-          </span>
-          {profile.held_reason && (
-            <span>{t("home.holdReason", { n: profile.held_reason })}</span>
-          )}
-          <span className="muted small">{t("home.warnings", { n: warningCount })}</span>
-        </div>
-      )}
-      <div
-        className={
-          isHeld ? "status off" : profile.isOnline ? "status on" : "status off"
-        }
-        onClick={toggleOnline}
-      >
-        <span className="dot" />
-        {isHeld
-          ? t("home.holdStatus")
-          : toggling
-            ? t("home.toggling")
-            : profile.isOnline
-              ? t("home.online")
-              : t("home.offline")}
-      </div>
-      {holdNotice && (
-        <p className="error">
-          {t("home.holdNotice")}
-        </p>
-      )}
-      {!isHeld && !profile.isOnline && (
-        <p className="muted">
-          {t("home.offlineHint")}
-        </p>
-      )}
-      {isHeld ? (
-        <p className="muted">
-          {t("home.holdHint")}
-        </p>
-      ) : (
-        <>
-          {loadError && (
-            <p className="error">
-              {t("home.loadError")}
-            </p>
-          )}
-          <h2>
-            {profile.isOnline ? t("home.requestsCount", { n: visible.length }) : t("home.requestsTitle")}
-          </h2>
-          {!profile.isOnline ? (
-            <p className="muted">{t("home.onlineEmpty")}</p>
-          ) : visible.length === 0 ? (
-            <p className="muted">
-              {t("home.noRequests")}
-            </p>
-          ) : (
-            <div className="list">
-              {visible.map((r) => (
-                <Link key={r.id} to={`/request/${r.id}`} className="card">
-                  <strong>{categoryLabel(r.category)}</strong>
-                  <span>{r.areaText || (r.approxLat !== null && r.approxLng !== null ? t("areaGps") : t("areaMissing"))}</span>
-                  {profile?.lat !== null &&
-                      profile?.lat !== undefined &&
-                    profile?.lng !== null &&
-                    profile?.lng !== undefined &&
-                    r.approxLat !== null &&
-                    r.approxLng !== null && (
-                      <span className="muted small">
-                        {t("distanceApprox", {
-                        n: distanceKm(
-                          profile.lat,
-                          profile.lng,
-                          r.approxLat,
-                          r.approxLng,
-                          ).toFixed(1),
-                      })}
-                      </span>
-                      )}
-              {r.description && (
-                    <span className="muted">{r.description}</span>
-                  )}
-                  <span className="muted small">
-                    {new Date(r.created_at).toLocaleString("en-IN")}
-                      </span>
-                  <span className="small" style={{ color: "#C74718", fontWeight: 700 }}>
-                    Request dekhein →
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-      <div className="row">
-        <button className="ghost" onClick={() => navigate("/profile")}>
-          {t("home.editProfile")}
-        </button>
-        <button className="ghost" onClick={() => navigate("/jobs")}>
-          {t("home.myJobs")}
-        </button>
-        <button className="ghost" onClick={() => navigate("/permissions")}>
-          {t("home.permissions")}
-        </button>
-      </div>
+  const { user, profile, refreshProfile, logout } = useAuth(); const navigate = useNavigate();
+  const [requests, setRequests] = useState<SosRequest[]>([]); const [loadError, setLoadError] = useState(false); const [holdNotice, setHoldNotice] = useState(false); const [permBanner, setPermBanner] = useState(false);
+  const forcedOfflineRef = useRef(false); const seenRef = useRef<Set<string>>(new Set()); const notifiedRef = useRef<Set<string>>(new Set()); const firstOnlineSnapshotRef = useRef(false);
+  const isHeld = profile?.status === "held"; const warningCount = profile?.warnings ?? 0;
+  useEffect(() => { const q = query(collection(db, "sos_requests"), where("status", "==", "pending")); return onSnapshot(q, (snap) => { setLoadError(false); const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as SosRequest); rows.sort((a,b) => a.created_at < b.created_at ? 1 : -1); setRequests(rows); }, () => setLoadError(true)); }, []);
+  const visible = requests.filter((r) => { if (!profile || !servesCategory(profile.categories, r.category)) return false; if (profile.lat !== null && profile.lng !== null && r.approxLat !== null && r.approxLng !== null && distanceKm(profile.lat, profile.lng, r.approxLat, r.approxLng) > profile.serviceRadiusKm) return false; return true; });
+  useEffect(() => { if (!profile) return; if (profile.isOnline && profile.status !== "held") { ensureSosChannel(); startOnlineService(); if (user) void registerFcmToken(user.uid); } else stopOnlineService(); }, [user, profile?.isOnline, profile?.status]);
+  useEffect(() => { if (!profile?.isOnline || profile?.status === "held") { notifiedRef.current.forEach((id) => { cancelRequestNotification(id); void cancelFullscreenNotification(id); }); notifiedRef.current.clear(); return; } if (!firstOnlineSnapshotRef.current) { visible.forEach((r) => seenRef.current.add(r.id)); firstOnlineSnapshotRef.current = true; return; } visible.forEach((r) => { if (!seenRef.current.has(r.id)) { seenRef.current.add(r.id); notifiedRef.current.add(r.id); notifyNewRequest(r); } }); notifiedRef.current.forEach((id) => { if (!visible.some((r) => r.id === id)) { notifiedRef.current.delete(id); cancelRequestNotification(id); void cancelFullscreenNotification(id); } }); }, [visible, profile?.isOnline, profile?.status]);
+  useEffect(() => { let cancelled = false; const check = async () => { const launch = await readLaunchAction(); if (!cancelled && launch?.action === "accept") navigate(`/request/${launch.requestId}`); }; void check(); window.addEventListener("focus", check); return () => { cancelled = true; window.removeEventListener("focus", check); }; }, [navigate]);
+  useEffect(() => { if (!isNative) return; const check = () => getPermissionRows().then((rows) => setPermBanner(rows.some((r) => r.state === "missing"))).catch(() => {}); check(); window.addEventListener("focus", check); return () => window.removeEventListener("focus", check); }, [isNative]);
+  useEffect(() => { if (profile?.status !== "held") { forcedOfflineRef.current = false; return; } if (!user || !profile.isOnline || forcedOfflineRef.current) return; forcedOfflineRef.current = true; updateDoc(doc(db, "mechanics", user.uid), { isOnline: false }).then(refreshProfile).catch(() => { forcedOfflineRef.current = false; }); }, [user, profile, refreshProfile]);
+  const toggleOnline = async () => { if (!user || !profile) return; if (isHeld) { setHoldNotice(true); return; } await updateDoc(doc(db, "mechanics", user.uid), { isOnline: !profile.isOnline }); await refreshProfile(); };
+  if (!profile) return <div className="page"><div className="brand-kicker">{t("ui.brand")}</div><h1>{t("ui.garageReady")}</h1><p className="muted">{t("ui.setupDesc")}</p><button onClick={() => navigate("/profile")}>{t("ui.profileSetup")}</button></div>;
+  return <div className="page">
+    <div className="between"><div><div className="brand-kicker" style={{fontSize:11}}>{t("ui.brand")}</div><p className="muted">{t("ui.namaste", { n: profile.name })}</p></div><div className="profile-initial">{initials(profile.name)}</div></div>
+    <div className="hero">
+      <div className="availability" onClick={toggleOnline}><span>● {isHeld ? t("ui.accountHold") : profile.isOnline ? t("ui.online") : t("ui.offline")}</span><span className={`toggle ${profile.isOnline && !isHeld ? "" : "off"}`}><i /></span></div>
+      <h2>{isHeld ? t("ui.holdReview") : profile.isOnline ? t("ui.onlineReady") : t("ui.offlineReady")}</h2><p>{isHeld ? t("ui.holdDesc") : profile.isOnline ? t("ui.onlineDesc") : t("ui.offlineDesc")}</p>
+      <div className="hero-meta"><span>⌖ {t("ui.area", { n: profile.serviceRadiusKm })}</span><span>◷ {profile.workingHours || t("ui.hoursUnset")}</span></div>
     </div>
-  );
+    {permBanner && !isHeld && <div className="notice"><span>♧</span><div><strong>{t("ui.alertSetup")}</strong><a onClick={() => navigate("/permissions")}>{t("ui.setupNow")}</a></div></div>}
+    {isHeld && <div className="notice"><span>!</span><div><strong>{t("ui.holdBanner")}</strong><p>{profile.held_reason || t("ui.adminReview")} · {t("ui.warnings", { n: warningCount })}</p></div></div>}
+    {holdNotice && <p className="error">{t("ui.holdNotice")}</p>}
+    <div className="section-head"><h2>{t("ui.newRequests")} <span style={{color:"var(--orange)"}}>{visible.length || ""}</span></h2><span>{t("ui.nearby")}</span></div>
+    {loadError && <p className="error">{t("ui.loadRequests")}</p>}
+    {!profile.isOnline ? <div className="card pad"><p className="muted">{t("ui.onlineEmpty")}</p></div> : visible.length === 0 ? <div className="card pad"><p className="muted">{t("ui.noPending")}</p></div> : <div className="stack">{visible.map((r) => <Link key={r.id} to={`/request/${r.id}`} className="card request-card">
+      <div className="request-card-head"><span className="service-icon">{serviceIcon(r.category)}</span><div><strong>{categoryLabel(r.category)}</strong><p className="muted">{t("ui.justArrived", { n: r.id.slice(0,6).toUpperCase() })}</p></div><span className="badge">{t("ui.new")}</span></div>
+      <div className="request-location"><i>⌖</i><span>{r.areaText || t("areaGps")}</span></div><p className="request-meta">{profile.lat != null && r.approxLat != null ? t("ui.kmAway", { n: distanceKm(profile.lat, profile.lng!, r.approxLat, r.approxLng!).toFixed(1) }) : ""}</p>
+      {r.description && <p className="request-copy">“{r.description}”</p>}<span className="primary-card-btn" style={{display:"block",padding:"14px",borderRadius:12,textAlign:"center",background:"var(--orange)",color:"white",fontWeight:800,fontSize:13}}>{t("ui.requestView")}</span>
+    </Link>)}</div>}<button className="ghost small" onClick={() => void logout()}>{t("home.logout")}</button>
+  </div>;
 }
